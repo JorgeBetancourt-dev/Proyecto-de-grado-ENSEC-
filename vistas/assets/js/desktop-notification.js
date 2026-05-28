@@ -1,0 +1,87 @@
+(function($) {
+  'use strict';
+  $.fn.easyNotify = function(options) {
+
+    var settings = $.extend({
+      title: "Notification",
+      options: {
+        body: "",
+        icon: "",
+        lang: 'pt-BR',
+        onClose: "",
+        onClick: "",
+        onError: ""
+      }
+    }, options);
+
+    this.init = function() {
+      var notify = this;
+      if (!("Notification" in window)) {
+        alert("This browser does not support desktop notification");
+      } else if (Notification.permission === "granted") {
+
+        var notification = new Notification(settings.title, settings.options);
+
+        notification.onclose = function() {
+          if (typeof settings.options.onClose === 'function') {
+            settings.options.onClose();
+          }
+        };
+
+        notification.onclick = function() {
+          if (typeof settings.options.onClick === 'function') {
+            settings.options.onClick();
+          }
+        };
+
+        notification.onerror = function() {
+          if (typeof settings.options.onError === 'function') {
+            settings.options.onError();
+          }
+        };
+
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission(function(permission) {
+          if (permission === "granted") {
+            notify.init();
+          }
+
+        });
+      }
+
+    };
+
+    this.init();
+    return this;
+  };
+
+
+  //Initialise notification
+  var myFunction = function() {
+    alert('Click function');
+  };
+  var myImg = "https://unsplash.it/600/600?image=777";
+
+  // Only bind the notification submit handler when the #easyNotify element exists.
+  // This avoids intercepting every form on the page and causing unexpected behavior.
+  var $easyNotify = $("#easyNotify");
+  if ($easyNotify.length) {
+    var $notifyForm = $easyNotify.closest('form');
+    $notifyForm.on('submit', function(event) {
+      event.preventDefault();
+
+      var $form = $(this);
+      var options = {
+        title: $form.find("#title").val() || settings.title,
+        options: {
+          body: $form.find("#message").val() || "",
+          icon: myImg,
+          lang: 'en-US',
+          onClick: myFunction
+        }
+      };
+      console.log(options);
+      $easyNotify.easyNotify(options);
+    });
+  }
+}(jQuery));

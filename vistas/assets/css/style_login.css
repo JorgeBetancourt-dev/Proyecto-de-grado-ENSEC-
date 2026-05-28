@@ -1,0 +1,37 @@
+:root {
+            --color-cyan-light:  #C4FFFF;
+            --color-cyan-mid:    #8BFFFF;
+            --color-teal:        #009092;
+            --color-black:       #000000;
+        }
+
+  .doctor-img {
+    width: 80%;
+    height: auto;
+  }
+  .logo-img {
+    width: 30%;
+    height: auto;
+
+    border-radius: 20px;
+  }
+  .box{
+    background-color: var(--color-teal);
+    border-radius: 20px;
+  }
+  .boxForm{
+    background-color: var(--color-cyan-mid);
+    padding: 20px;
+    border-radius: 20px;
+  }
+  .btncolor{
+    background-color: var(--color-teal);
+    color: var(--color-cyan-light);
+  }
+  .textcolor{
+    color: var(--color-black);
+  }
+  body
+  {
+    background-color: var(--color-cyan-light);
+  }
