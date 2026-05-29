@@ -37,6 +37,11 @@ $nombresUnicos = array_unique(
                 $etiqueta = "Pacientes";
                 $ruta     = "panel_paciente";
                 break;
+            case "tipo_servicio":
+                $icono    = "fa fa-list-alt";
+                $etiqueta = "Tipos de Servicio";
+                $ruta     = "panel_tipo_servicio";
+                break;
             default:
                 $icono    = "fa fa-circle";
                 $etiqueta = ucfirst($nombre);
