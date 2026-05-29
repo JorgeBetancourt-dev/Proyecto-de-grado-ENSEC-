@@ -15,9 +15,7 @@ ControladorServicios::ctrEliminarServicio();
 ControladorServicios::ctrEditarServicio();
 ControladorServicios::crtCrearServicios();
 
-ControladorPacientes::ctrEliminarPacientes();
-ControladorPacientes::ctrEditarPacientes();
-ControladorPacientes::crtCrearPacientes();
+
 
 ControladorUsuarios::ctrEliminarUsuarios();
 ControladorUsuarios::ctrEditarUsuarios();
@@ -30,6 +28,10 @@ ControladorRoles::ctrEliminarRol();
 ControladorPermisos::crtCrearPermiso();
 ControladorPermisos::ctrEditarPermiso();
 ControladorPermisos::ctrEliminarPermiso();
+
+ControladorPacientes::crtCrearPacientes();
+ControladorPacientes::ctrEditarPacientes();
+ControladorPacientes::ctrEliminarPacientes();
 
 $app = new ControladorApp();
 $app->crtApp();

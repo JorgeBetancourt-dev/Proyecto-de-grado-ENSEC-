@@ -5,7 +5,6 @@ $permisosRol = $id_rol
     ? ControladorRoles::ctrMostrarPermisosPorRol($id_rol)
     : [];
 
-// Tomamos los "nombre" únicos y activos
 $nombresUnicos = array_unique(
     array_map(
         fn($p) => $p["nombre"],
@@ -17,7 +16,6 @@ $nombresUnicos = array_unique(
 <nav class="sidebar sidebar-offcanvas" id="sidebar">
   <ul class="nav">
 
-    <!-- Inicio: siempre visible -->
     <li class="nav-item">
       <a class="nav-link" href="/Marie_stopes_pruebas/inicio">
         <i class="fa fa-home menu-icon"></i>
@@ -25,22 +23,20 @@ $nombresUnicos = array_unique(
       </a>
     </li>
 
-    <!-- Menú dinámico por nombre único -->
     <?php foreach ($nombresUnicos as $nombre): ?>
       <?php
-        // Icono y etiqueta según el nombre
+
         switch ($nombre) {
             case "usuario":
                 $icono    = "fa fa-users";
                 $etiqueta = "Usuarios";
                 $ruta     = "panel_usuario";
                 break;
-            // Cuando agregues más tablas, vas añadiendo casos aquí:
-            // case "paciente":
-            //     $icono    = "fa fa-user-plus";
-            //     $etiqueta = "Pacientes";
-            //     $ruta     = "panel_paciente";
-            //     break;
+            case "paciente":
+                $icono    = "fa fa-user-plus";
+                $etiqueta = "Pacientes";
+                $ruta     = "panel_paciente";
+                break;
             default:
                 $icono    = "fa fa-circle";
                 $etiqueta = ucfirst($nombre);
@@ -54,6 +50,7 @@ $nombresUnicos = array_unique(
           <span class="menu-title"><?= $etiqueta ?></span>
         </a>
       </li>
+      
     <?php endforeach; ?>
 
   </ul>
