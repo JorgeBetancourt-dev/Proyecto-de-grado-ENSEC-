@@ -6,10 +6,11 @@ class ModeloRoles {
     static public function mdlMostrarPermisosPorRol($id_rol) {
         $stmt = Conexion::conectar()->prepare(
             "SELECT p.id_permiso, p.nombre, p.modulo, rp.activo
-             FROM rol_permiso rp
-             INNER JOIN permisos p ON p.id_permiso = rp.id_permiso
-             WHERE rp.id_rol = :id_rol
-             AND p.activo = 1"
+            FROM rol_permiso rp
+            INNER JOIN permisos p ON p.id_permiso = rp.id_permiso
+            WHERE rp.id_rol = :id_rol
+            AND rp.activo = 1
+            AND p.activo = 1"
         );
         $stmt->bindParam(":id_rol", $id_rol, PDO::PARAM_INT);
         $stmt->execute();

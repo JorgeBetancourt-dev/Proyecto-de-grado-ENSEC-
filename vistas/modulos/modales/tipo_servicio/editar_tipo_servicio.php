@@ -3,23 +3,20 @@
     <div class="modal-content">
     <form method="POST" class="pt-3">
       <div class="modal-header">
-        <h5 class="pt-3">Editar tipo de servicio</h5>
+        <h5 class="pt-3">Editar servicio</h5>
       </div>
       <div class="modal-body">
         <input type="hidden" name="editarIdTipoServicio" id="editarIdTipoServicio">
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-tag"></i></span>
-            <input type="text" class="form-control input-lg" name="editarNombreTipoServicio"
-                   id="editarNombreTipoServicio" placeholder="Ingresar nombre" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-tag"></i></span>
+            <input type="text" class="form-control input-lg" name="editarNombreTipoServicio" id="editarNombreTipoServicio" placeholder="Ingresar nombre" style="padding-left:35px;" required>
           </div>
         </div>
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-usd"></i></span>
-            <input type="number" step="0.01" min="0" class="form-control input-lg"
-                   name="editarPrecioTipoServicio" id="editarPrecioTipoServicio"
-                   placeholder="Ingresar precio" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-money"></i></span>
+            <input type="number" step="0.01" min="0" class="form-control input-lg" name="editarPrecioTipoServicio" id="editarPrecioTipoServicio" placeholder="Ingresar precio" style="padding-left:35px;" required>
           </div>
         </div>
       </div>

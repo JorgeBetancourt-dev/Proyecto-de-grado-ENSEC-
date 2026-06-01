@@ -7,7 +7,7 @@ include "vistas/assets/eventos/tipo_servicio.eventos.php";
 
 <div>
   <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modalAgregarTipoServicio">
-    Agregar nuevo tipo de servicio
+    Agregar nuevo servicio
   </button>
 </div>
 

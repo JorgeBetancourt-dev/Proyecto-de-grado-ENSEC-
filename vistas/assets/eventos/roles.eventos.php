@@ -43,12 +43,10 @@ document.addEventListener("click", function(e) {
         document.getElementById("editarIdRol").value     = id;
         document.getElementById("editarNombreRol").value = nombre;
 
-        // Desmarcar todos los checkboxes primero
         document.querySelectorAll(".checkbox-editar-permiso").forEach(function(cb) {
             cb.checked = false;
         });
 
-        // Cargar permisos actuales del rol y marcar los que corresponden
         fetch("/Marie_stopes_pruebas/index.php?action=getPermisosPorRol&id_rol=" + id)
             .then(function(res) { return res.json(); })
             .then(function(permisos) {
@@ -56,9 +54,8 @@ document.addEventListener("click", function(e) {
                     var cb = document.getElementById("editarPermiso_" + p.id_permiso);
                     if (cb) cb.checked = true;
                 });
+                $("#modalEditarRol").modal("show");
             });
-
-        $("#modalEditarRol").modal("show");
     }
 });
 

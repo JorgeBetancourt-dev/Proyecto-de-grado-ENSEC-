@@ -28,6 +28,9 @@ session_start();
                     "panel_acceso"   => "panel_acceso.php",
                     "panel_paciente" => "panel_paciente.php",
                     "panel_tipo_servicio" => "panel_tipo_servicio.php",
+                    "panel_examen" => "panel_examen.php",
+                    "panel_medicamento" => "panel_medicamento.php",
+                    "panel_cliente" => "panel_cliente.php",
                 ];
 
                 if (isset($_GET["ruta"])) {

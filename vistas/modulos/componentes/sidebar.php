@@ -39,13 +39,23 @@ $nombresUnicos = array_unique(
                 break;
             case "tipo_servicio":
                 $icono    = "fa fa-list-alt";
-                $etiqueta = "Tipos de Servicio";
+                $etiqueta = "Servicios";
                 $ruta     = "panel_tipo_servicio";
                 break;
-            default:
-                $icono    = "fa fa-circle";
-                $etiqueta = ucfirst($nombre);
-                $ruta     = "panel_" . $nombre;
+            case "examen":
+                $icono    = "fa fa-flask";
+                $etiqueta = "Exámenes";
+                $ruta     = "panel_examen";
+                break;
+            case "medicamento":
+                $icono    = "fa fa-medkit";
+                $etiqueta = "Medicamentos";
+                $ruta     = "panel_medicamento";
+                break;
+            case "cliente":
+                $icono    = "fa fa-building";
+                $etiqueta = "Clientes";
+                $ruta     = "panel_cliente";
                 break;
         }
       ?>

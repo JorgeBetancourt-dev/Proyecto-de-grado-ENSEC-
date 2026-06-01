@@ -8,17 +8,15 @@
       <div class="modal-body">
         <input type="hidden" name="editarIdPermiso" id="editarIdPermiso">
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-key"></i></span>
-            <input type="text" class="form-control input-lg" name="editarModulo"
-                   id="editarModulo" placeholder="Módulo (ej: crear_usuario)" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-key"></i></span>
+            <input type="text" class="form-control input-lg" name="editarModulo" id="editarModulo" placeholder="Módulo (ej: crear_usuario)" style="padding-left:35px;" required>
           </div>
         </div>
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-tag"></i></span>
-            <input type="text" class="form-control input-lg" name="editarNombrePermiso"
-                   id="editarNombrePermiso" placeholder="Nombre (ej: usuario)" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-tag"></i></span>
+            <input type="text" class="form-control input-lg" name="editarNombrePermiso" id="editarNombrePermiso" placeholder="Nombre (ej: usuario)" style="padding-left:35px;" required>
           </div>
         </div>
       </div>

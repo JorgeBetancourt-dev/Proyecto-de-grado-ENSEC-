@@ -123,5 +123,25 @@ class ControladorUsuarios {
             exit;
         }
     }
+    public function crtCambiarContraseñaUsuario() {
+    if (isset($_POST["act_password"], $_POST["new_password1"], $_POST["new_password2"])) {
+        if (strlen($_POST["act_password"]) >= 1 &&
+            strlen($_POST["new_password1"]) >= 8 &&
+            strlen($_POST["new_password2"]) >= 8) {
+
+            $tabla = "usuarios";
+            $datos = array(
+                "act"    => $_POST["act_password"],
+                "new_p1" => $_POST["new_password1"],
+                "new_p2" => $_POST["new_password2"]
+            );
+
+            $respuesta = ModeloUsuarios::mdlCambiarContraseñaUsuario($tabla, $datos);
+
+            if (session_status() == PHP_SESSION_NONE) session_start();
+            $_SESSION["cambiar_password"] = $respuesta;
+        }
+    }
+}
 }
 ?>

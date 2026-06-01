@@ -8,52 +8,45 @@
       <div class="modal-body">
         <input type="hidden" name="editarIdPaciente" id="editarIdPaciente">
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-user"></i></span>
-            <input type="text" class="form-control input-lg" name="editarNombre"
-                   id="editarNombre" placeholder="Ingresar nombre" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-user"></i></span>
+            <input type="text" class="form-control input-lg" name="editarNombre" id="editarNombre" placeholder="Ingresar nombre" style="padding-left:35px;" required>
           </div>
         </div>
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-user"></i></span>
-            <input type="text" class="form-control input-lg" name="editarApellidos"
-                   id="editarApellidos" placeholder="Ingresar apellidos" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-user"></i></span>
+            <input type="text" class="form-control input-lg" name="editarApellidos" id="editarApellidos" placeholder="Ingresar apellidos" style="padding-left:35px;" required>
           </div>
         </div>
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-id-card"></i></span>
-            <input type="text" class="form-control input-lg" name="editarCI"
-                   id="editarCI" placeholder="Ingresar C.I." required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-id-badge"></i></span>
+            <input type="text" class="form-control input-lg" name="editarCI" id="editarCI" placeholder="Ingresar C.I." style="padding-left:35px;" required>
           </div>
         </div>
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-tint"></i></span>
-            <input type="text" class="form-control input-lg" name="editarGrupoSanguineo"
-                   id="editarGrupoSanguineo" placeholder="Grupo sanguíneo (ej: A+)" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-heart"></i></span>
+            <input type="text" class="form-control input-lg" name="editarGrupoSanguineo" id="editarGrupoSanguineo" placeholder="Grupo sanguíneo (ej: A+)" style="padding-left:35px;" required>
           </div>
         </div>
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-phone"></i></span>
-            <input type="text" class="form-control input-lg" name="editarTelefono"
-                   id="editarTelefono" placeholder="Ingresar teléfono" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-mobile"></i></span>
+            <input type="text" class="form-control input-lg" name="editarTelefono" id="editarTelefono" placeholder="Ingresar teléfono" style="padding-left:35px;" required>
           </div>
         </div>
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
-            <input type="date" class="form-control input-lg" name="editarFechaNacimiento"
-                   id="editarFechaNacimiento" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-calendar"></i></span>
+            <input type="date" class="form-control input-lg" name="editarFechaNacimiento" id="editarFechaNacimiento" min="1930-01-01" max="<?= date('Y-m-d') ?>" style="padding-left:35px;" required>
           </div>
         </div>
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-map-marker"></i></span>
-            <input type="text" class="form-control input-lg" name="editarDireccion"
-                   id="editarDireccion" placeholder="Ingresar dirección" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-location-pin"></i></span>
+            <input type="text" class="form-control input-lg" name="editarDireccion" id="editarDireccion" placeholder="Ingresar dirección" style="padding-left:35px;" required>
           </div>
         </div>
       </div>

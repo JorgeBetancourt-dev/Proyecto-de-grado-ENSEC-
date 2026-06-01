@@ -3,21 +3,19 @@
     <div class="modal-content">
     <form method="POST" class="pt-3">
       <div class="modal-header">
-        <h5 class="pt-3">Registrar tipo de servicio</h5>
+        <h5 class="pt-3">Registrar servicio</h5>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-tag"></i></span>
-            <input type="text" class="form-control input-lg" name="nuevoNombreTipoServicio"
-                   placeholder="Ingresar nombre" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-tag"></i></span>
+            <input type="text" class="form-control input-lg" name="nuevoNombreTipoServicio" placeholder="Ingresar nombre" style="padding-left:35px;" required>
           </div>
         </div>
         <div class="form-group">
-          <div class="input-group">
-            <span class="input-group-addon"><i class="fa fa-usd"></i></span>
-            <input type="number" step="0.01" min="0" class="form-control input-lg"
-                   name="nuevoPrecioTipoServicio" placeholder="Ingresar precio" required>
+          <div style="position:relative;">
+            <span class="position-icon"><i class="ti-money"></i></span>
+            <input type="number" step="0.01" min="0" class="form-control input-lg" name="nuevoPrecioTipoServicio" placeholder="Ingresar precio" style="padding-left:35px;" required>
           </div>
         </div>
       </div>

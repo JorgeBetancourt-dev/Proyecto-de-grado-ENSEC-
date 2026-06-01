@@ -17,7 +17,9 @@ static public function crtCrearPacientes() {
                 preg_match('/^[a-zA-Z0-9]+$/', $_POST["nuevoCI"])                      &&
                 preg_match('/^[A-Za-z0-9+\-]+$/', $_POST["nuevoGrupoSanguineo"])       &&
                 preg_match('/^[0-9]+$/', $_POST["nuevoTelefono"])                      &&
-                !empty($_POST["nuevaFechaNacimiento"])                                 &&
+                !empty( $_POST["nuevaFechaNacimiento"]) &&
+                        $_POST["nuevaFechaNacimiento"] >= "1930-01-01" &&
+                        $_POST["nuevaFechaNacimiento"] <= date("Y-m-d") &&
                 preg_match('/^[a-zA-Z0-9ñÑáéíóúÁÉÍÓÚ\s#.,ºª]+$/', $_POST["nuevaDireccion"])) {
 
                 $tabla = "pacientes";
@@ -52,7 +54,9 @@ static public function crtCrearPacientes() {
                 preg_match('/^[a-zA-Z0-9]+$/', $_POST["editarCI"])                    &&
                 preg_match('/^[A-Za-z0-9+\-]+$/', $_POST["editarGrupoSanguineo"]) &&
                 preg_match('/^[0-9]+$/', $_POST["editarTelefono"])                    &&
-                !empty($_POST["editarFechaNacimiento"])                               &&
+                !empty( $_POST["editarFechaNacimiento"]) &&
+                        $_POST["editarFechaNacimiento"] >= "1930-01-01" &&
+                        $_POST["editarFechaNacimiento"] <= date("Y-m-d") &&
                 preg_match('/^[a-zA-Z0-9ñÑáéíóúÁÉÍÓÚ\s#.,ºª]+$/', $_POST["editarDireccion"])) {
 
                 $tabla = "pacientes";
