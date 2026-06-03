@@ -53,13 +53,13 @@ document.addEventListener("click", function(e) {
         let nombre    = e.target.getAttribute("data-nombre");
         let apellido = e.target.getAttribute("data-apellido");
         let usuario   = e.target.getAttribute("data-usuario");
-        let idRol     = e.target.getAttribute("data-id-rol"); // ← ahora es id numérico
+        let idRol     = e.target.getAttribute("data-id-rol"); 
 
         document.getElementById("editarIdUsuario").value  = id;
         document.getElementById("editarNombre").value     = nombre;
-        document.getElementById("editarApellido").value = apellido;
+        document.getElementById("editarApellido").value   = apellido;
         document.getElementById("editarUsuario").value    = usuario;
-        document.getElementById("editarIdRol").value      = idRol; // ← selecciona por id_rol
+        document.getElementById("editarIdRol").value      = idRol;
     }
 });
 

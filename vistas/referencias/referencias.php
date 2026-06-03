@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="vistas/assets/js/select.dataTables.min.css" type="text/css">
 <link rel="stylesheet" href="vistas/assets/css/vertical-layout-light/style.css">
 <!-- Font Awesome Iconos -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="vistas/assets/vendors/font-awesome/css/font-awesome.min.css">
 <link rel="shortcut icon" href="vistas/assets/images/favicon.png" />
 
 <script src="vistas/assets/vendors/js/vendor.bundle.base.js"></script>
@@ -22,7 +22,8 @@
 <script src="vistas/assets/js/dashboard.js"></script>
 <script src="vistas/assets/js/Chart.roundedBarCharts.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="vistas/assets/vendors/sweetalert2/sweetalert2.min.css">
+<script src="vistas/assets/vendors/sweetalert2/sweetalert2.min.js"></script>
 
 <!--Estas llamadas son propias-->
 <link rel="stylesheet" href="vistas/assets/css/style_login.css">

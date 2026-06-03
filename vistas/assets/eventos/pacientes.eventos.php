@@ -63,7 +63,7 @@ document.addEventListener("click", function(e) {
         Swal.fire({
             icon: "warning",
             title: "¿Estás seguro?",
-            text: "Esta acción desactivará al paciente.",
+            text: "Esta acción no se puede deshacer.",
             showCancelButton: true,
             confirmButtonText: "Sí, eliminar",
             cancelButtonText: "Cancelar"
