@@ -36,6 +36,17 @@
               <?php endforeach; ?>
             </select>
           </div>
+          <div class="form-group">
+            <select class="form-control input-lg" name="editarIdHorario" id="editarIdHorario" required>
+              <option value="">Selecciona un horario</option>
+              <?php
+                $horarios = ControladorHorarios::ctrMostrarHorarios(null, null);
+                foreach ($horarios as $h):
+              ?>
+                <option value="<?= $h["id_horario"] ?>"><?= htmlspecialchars($h["nombre"]) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" data-dismiss="modal" class="btn btn-default">Cerrar</button>
@@ -45,4 +56,3 @@
     </div>
   </div>
 </div>
-

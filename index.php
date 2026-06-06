@@ -27,6 +27,9 @@ require_once "modelos/clientes.modelo.php";
 // Citas
 require_once "controladores/citas.controlador.php";
 require_once "modelos/citas.modelo.php";
+// Horarios
+require_once "controladores/horarios.controlador.php";
+require_once "modelos/horarios.modelo.php";
 
 ControladorUsuarios::ctrEliminarUsuarios();
 ControladorUsuarios::ctrEditarUsuarios();
@@ -64,6 +67,11 @@ ControladorCitas::ctrCrearPacienteDesdeCita();         // AJAX POST: registrar p
 ControladorCitas::ctrBuscarPacientePorCarnet();        // AJAX: buscar paciente por carnet
 ControladorCitas::ctrMostrarMedicos();                 // AJAX: obtener lista de médicos
 ControladorCitas::crtCrearCita();                      // POST: registrar nueva cita
+
+ControladorHorarios::crtCrearHorario();
+ControladorHorarios::ctrEditarHorario();
+ControladorHorarios::ctrEliminarHorario();
+ 
  
 // AJAX para FullCalendar — va junto al bloque de getPermisosPorRol
 if (isset($_GET["action"]) && $_GET["action"] == "getCitas") {

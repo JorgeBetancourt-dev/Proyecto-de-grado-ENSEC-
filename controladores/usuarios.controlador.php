@@ -47,23 +47,25 @@ class ControladorUsuarios {
     }
 
     static public function crtCrearUsuarios() {
-        if (isset($_POST["nuevoNombre"], $_POST["nuevoApellido"], $_POST["nuevoUsuario"], 
-                  $_POST["nuevoPassword"], $_POST["nuevoIdRol"])) {
+        if (isset($_POST["nuevoNombre"], $_POST["nuevoApellido"], $_POST["nuevoUsuario"],
+                  $_POST["nuevoPassword"], $_POST["nuevoIdRol"], $_POST["nuevoIdHorario"])) {
             if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoNombre"])     &&
                 preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoApellido"])  &&
                 preg_match('/^[a-zA-Z0-9]+$/', $_POST["nuevoUsuario"])               &&
                 preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/', $_POST["nuevoPassword"]) &&
-                is_numeric($_POST["nuevoIdRol"])) {
+                is_numeric($_POST["nuevoIdRol"])                                      &&
+                is_numeric($_POST["nuevoIdHorario"])) {
 
                 $tabla        = "usuarios";
                 $passwordHash = password_hash($_POST["nuevoPassword"], PASSWORD_BCRYPT, ['cost' => 12]);
 
                 $datos = array(
-                    "nombre"    => $_POST["nuevoNombre"],
-                    "apellido"  => $_POST["nuevoApellido"],
-                    "usuario"   => $_POST["nuevoUsuario"],
+                    "nombre"     => $_POST["nuevoNombre"],
+                    "apellido"   => $_POST["nuevoApellido"],
+                    "usuario"    => $_POST["nuevoUsuario"],
                     "contraseña" => $passwordHash,
-                    "id_rol"    => (int) $_POST["nuevoIdRol"]
+                    "id_rol"     => (int) $_POST["nuevoIdRol"],
+                    "id_horario" => (int) $_POST["nuevoIdHorario"]
                 );
 
                 $respuesta = ModeloUsuarios::mdlCrearUsuarios($tabla, $datos);
@@ -84,19 +86,21 @@ class ControladorUsuarios {
 
     static public function ctrEditarUsuarios() {
         if (isset($_POST["editarIdUsuario"], $_POST["editarNombre"], $_POST["editarApellido"],
-                  $_POST["editarUsuario"], $_POST["editarIdRol"])) {
+                  $_POST["editarUsuario"], $_POST["editarIdRol"], $_POST["editarIdHorario"])) {
             if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["editarNombre"])    &&
                 preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["editarApellido"]) &&
                 preg_match('/^[a-zA-Z0-9]+$/', $_POST["editarUsuario"])              &&
-                is_numeric($_POST["editarIdRol"])) {
+                is_numeric($_POST["editarIdRol"])                                     &&
+                is_numeric($_POST["editarIdHorario"])) {
 
                 $tabla = "usuarios";
                 $datos = array(
-                    "id"        => $_POST["editarIdUsuario"],
-                    "nombre"    => $_POST["editarNombre"],
-                    "apellido"  => $_POST["editarApellido"],
-                    "usuario"   => $_POST["editarUsuario"],
-                    "id_rol"    => (int) $_POST["editarIdRol"]
+                    "id"         => $_POST["editarIdUsuario"],
+                    "nombre"     => $_POST["editarNombre"],
+                    "apellido"   => $_POST["editarApellido"],
+                    "usuario"    => $_POST["editarUsuario"],
+                    "id_rol"     => (int) $_POST["editarIdRol"],
+                    "id_horario" => (int) $_POST["editarIdHorario"]
                 );
 
                 $respuesta = ModeloUsuarios::mdlEditarUsuario($tabla, $datos);
@@ -123,25 +127,26 @@ class ControladorUsuarios {
             exit;
         }
     }
+
     public function crtCambiarContraseñaUsuario() {
-    if (isset($_POST["act_password"], $_POST["new_password1"], $_POST["new_password2"])) {
-        if (strlen($_POST["act_password"]) >= 1 &&
-            strlen($_POST["new_password1"]) >= 8 &&
-            strlen($_POST["new_password2"]) >= 8) {
+        if (isset($_POST["act_password"], $_POST["new_password1"], $_POST["new_password2"])) {
+            if (strlen($_POST["act_password"]) >= 1 &&
+                strlen($_POST["new_password1"]) >= 8 &&
+                strlen($_POST["new_password2"]) >= 8) {
 
-            $tabla = "usuarios";
-            $datos = array(
-                "act"    => $_POST["act_password"],
-                "new_p1" => $_POST["new_password1"],
-                "new_p2" => $_POST["new_password2"]
-            );
+                $tabla = "usuarios";
+                $datos = array(
+                    "act"    => $_POST["act_password"],
+                    "new_p1" => $_POST["new_password1"],
+                    "new_p2" => $_POST["new_password2"]
+                );
 
-            $respuesta = ModeloUsuarios::mdlCambiarContraseñaUsuario($tabla, $datos);
+                $respuesta = ModeloUsuarios::mdlCambiarContraseñaUsuario($tabla, $datos);
 
-            if (session_status() == PHP_SESSION_NONE) session_start();
-            $_SESSION["cambiar_password"] = $respuesta;
+                if (session_status() == PHP_SESSION_NONE) session_start();
+                $_SESSION["cambiar_password"] = $respuesta;
+            }
         }
     }
-}
 }
 ?>

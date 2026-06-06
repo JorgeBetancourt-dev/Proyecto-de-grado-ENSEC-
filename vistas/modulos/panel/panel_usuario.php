@@ -12,7 +12,7 @@ include "vistas/assets/eventos/usuarios.eventos.php";
 </div>
 
 <div class="row">
-  <div class="col-10">
+  <div class="col-12">
     <div class="box-body pt-3">
       <table class="table table-bordered table-striped tablas" width="100%">
         <thead>
@@ -22,6 +22,7 @@ include "vistas/assets/eventos/usuarios.eventos.php";
             <th>Apellido</th>
             <th>Usuario</th>
             <th>Rol</th>
+            <th>Horario</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -37,6 +38,7 @@ include "vistas/assets/eventos/usuarios.eventos.php";
             <td><?= htmlspecialchars($value["apellido"]) ?></td>
             <td><?= htmlspecialchars($value["usuario"]) ?></td>
             <td><?= htmlspecialchars($value["nombre_rol"] ?? "Sin rol") ?></td>
+            <td><?= htmlspecialchars($value["nombre_horario"] ?? "Sin horario") ?></td>
             <td>
               <button class="btn btn-warning btnEditarUsuario"
                 data-id="<?= $id ?>"
@@ -44,6 +46,7 @@ include "vistas/assets/eventos/usuarios.eventos.php";
                 data-apellido="<?= htmlspecialchars($value["apellido"]) ?>"
                 data-usuario="<?= htmlspecialchars($value["usuario"]) ?>"
                 data-id-rol="<?= $value["id_rol"] ?>"
+                data-id-horario="<?= $value["id_horario"] ?>"
                 data-toggle="modal"
                 data-target="#modalEditarUsuario">
                 Editar

@@ -20,8 +20,6 @@
 </script>
 <?php unset($_SESSION["Validar_contraseña"]); endif; ?>
 
-
-
 <?php if (isset($_SESSION["eliminar_usuario"])): ?>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -49,17 +47,19 @@
 <script>
 document.addEventListener("click", function(e) {
     if (e.target.classList.contains("btnEditarUsuario")) {
-        let id        = e.target.getAttribute("data-id");
-        let nombre    = e.target.getAttribute("data-nombre");
-        let apellido = e.target.getAttribute("data-apellido");
-        let usuario   = e.target.getAttribute("data-usuario");
-        let idRol     = e.target.getAttribute("data-id-rol"); 
+        let id         = e.target.getAttribute("data-id");
+        let nombre     = e.target.getAttribute("data-nombre");
+        let apellido   = e.target.getAttribute("data-apellido");
+        let usuario    = e.target.getAttribute("data-usuario");
+        let idRol      = e.target.getAttribute("data-id-rol");
+        let idHorario  = e.target.getAttribute("data-id-horario");
 
         document.getElementById("editarIdUsuario").value  = id;
         document.getElementById("editarNombre").value     = nombre;
         document.getElementById("editarApellido").value   = apellido;
         document.getElementById("editarUsuario").value    = usuario;
         document.getElementById("editarIdRol").value      = idRol;
+        document.getElementById("editarIdHorario").value  = idHorario;
     }
 });
 

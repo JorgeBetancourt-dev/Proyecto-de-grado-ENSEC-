@@ -62,6 +62,11 @@ $nombresUnicos = array_unique(
                 $etiqueta = "Citas";
                 $ruta     = "panel_cita";
                 break;
+            case "horario":
+                $icono    = "fa fa-clock-o";
+                $etiqueta = "Horarios";
+                $ruta     = "panel_horario";
+                break;
         }
       ?>
       <li class="nav-item">
