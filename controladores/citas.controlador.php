@@ -88,11 +88,36 @@ class ControladorCitas {
         }
     }
 
-    // Obtener médicos (llamado vía AJAX)
+    // Obtener médicos filtrados por horario según fecha (AJAX)
     static public function ctrMostrarMedicos() {
         if (isset($_GET["action"]) && $_GET["action"] == "getMedicos") {
-            $medicos = ModeloCitas::mdlMostrarMedicos();
+            $fecha        = $_GET["fecha"]        ?? "";
+            $id_tipo_cita = $_GET["id_tipo_cita"] ?? "";
+
+            if (empty($fecha) || empty($id_tipo_cita)) {
+                echo json_encode([]);
+                exit;
+            }
+
+            $medicos = ModeloCitas::mdlMostrarMedicosPorHorario($fecha, $id_tipo_cita);
             echo json_encode($medicos);
+            exit;
+        }
+    }
+
+    // Obtener horas ocupadas de un médico en una fecha (AJAX)
+    static public function ctrHorasOcupadas() {
+        if (isset($_GET["action"]) && $_GET["action"] == "getHorasOcupadas") {
+            $id_medico = $_GET["id_medico"] ?? "";
+            $fecha     = $_GET["fecha"]     ?? "";
+
+            if (empty($id_medico) || empty($fecha)) {
+                echo json_encode([]);
+                exit;
+            }
+
+            $ocupadas = ModeloCitas::mdlHorasOcupadasMedico($id_medico, $fecha);
+            echo json_encode($ocupadas);
             exit;
         }
     }
@@ -105,11 +130,36 @@ class ControladorCitas {
             $id_paciente = $_POST["nuevaCitaIdPaciente"];
             $fecha       = $_POST["nuevaCitaFecha"];
             $hora        = $_POST["nuevaCitaHora"];
-            $id_medico   = !empty($_POST["nuevaCitaIdMedico"]) ? $_POST["nuevaCitaIdMedico"] : null;
+            $id_medico    = !empty($_POST["nuevaCitaIdMedico"])    ? $_POST["nuevaCitaIdMedico"]    : null;
+            $id_tipo_cita = !empty($_POST["nuevaCitaIdTipoCita"]) ? $_POST["nuevaCitaIdTipoCita"] : null;
 
             // Validaciones básicas
-            if (!is_numeric($id_paciente) || empty($fecha) || empty($hora)) {
+            if (!is_numeric($id_paciente) || empty($fecha) || empty($hora) || $id_tipo_cita === null) {
                 $_SESSION["crear_cita"] = "error";
+                header("Location: " . $_SERVER["HTTP_REFERER"]);
+                exit;
+            }
+
+            // Validar que no sea domingo
+            $diaSemana = date('N', strtotime($fecha)); // 7 = domingo
+            if ($diaSemana == 7) {
+                $_SESSION["crear_cita"] = "domingo";
+                header("Location: " . $_SERVER["HTTP_REFERER"]);
+                exit;
+            }
+
+            // Validar que la hora no esté entre 01:00 y 07:29
+            if ($hora >= "01:00" && $hora < "07:30") {
+                $_SESSION["crear_cita"] = "hora_no_permitida";
+                header("Location: " . $_SERVER["HTTP_REFERER"]);
+                exit;
+            }
+
+            // Validar hora máxima según día
+            $esSabado = ($diaSemana == 6);
+            $horaMax  = $esSabado ? "13:30" : "19:50";
+            if ($hora > $horaMax) {
+                $_SESSION["crear_cita"] = "hora_no_permitida";
                 header("Location: " . $_SERVER["HTTP_REFERER"]);
                 exit;
             }
@@ -128,6 +178,7 @@ class ControladorCitas {
                 "id_recepcionista_registra" => (int) $_SESSION["IdUsuario"],
                 "id_recepcionista_asigna"   => $id_medico !== null ? (int) $_SESSION["IdUsuario"] : null,
                 "id_medico"                 => $id_medico !== null ? (int) $id_medico : null,
+                "id_tipo_cita"              => $id_tipo_cita !== null ? (int) $id_tipo_cita : null,
                 "fecha"                     => $fecha,
                 "hora"                      => $hora
             );

@@ -4,6 +4,10 @@
         <?php if ($_SESSION["crear_cita"] == "ok"): ?>
         Swal.fire({ icon: "success", title: "¡Cita registrada correctamente!", confirmButtonText: "Cerrar" })
             .then(function () { if (window.refrescarCalendario) window.refrescarCalendario(); });
+        <?php elseif ($_SESSION["crear_cita"] == "domingo"): ?>
+        Swal.fire({ icon: "warning", title: "Día no disponible", text: "No se pueden registrar citas los domingos.", confirmButtonText: "Cerrar" });
+        <?php elseif ($_SESSION["crear_cita"] == "hora_no_permitida"): ?>
+        Swal.fire({ icon: "warning", title: "Hora no permitida", text: "El horario de atención es de 07:30 a 19:50 (Lun-Vie) y de 07:30 a 13:30 los sábados.", confirmButtonText: "Cerrar" });
         <?php elseif ($_SESSION["crear_cita"] == "fecha_pasada"): ?>
         Swal.fire({ icon: "warning", title: "Fecha u hora no válida", text: "No se pueden registrar citas en una fecha u hora anterior a la actual.", confirmButtonText: "Cerrar" });
         <?php else: ?>
@@ -16,26 +20,56 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-    // Controlar el min de la hora según la fecha seleccionada
+    // Controlar la fecha: bloquear domingos y ajustar min/max de hora
     document.getElementById("nuevaCitaFecha").addEventListener("change", function () {
-        var hoy       = new Date();
-        var horaInput = document.getElementById("nuevaCitaHora");
-        var hh        = String(hoy.getHours()).padStart(2, "0");
-        var mm        = String(hoy.getMinutes()).padStart(2, "0");
-        var horaMin   = hh + ":" + mm;
+        var fechaSeleccionada = new Date(this.value + "T00:00:00");
+        var diaSemana         = fechaSeleccionada.getDay(); // 0=domingo, 6=sábado
 
-        // Construir "hoy" en formato YYYY-MM-DD usando hora local (no UTC)
+        // Si eligió domingo, limpiar y avisar
+        if (diaSemana === 0) {
+            this.value = "";
+            document.getElementById("nuevaCitaHora").value = "";
+            Swal.fire({
+                icon: "warning",
+                title: "Día no disponible",
+                text: "No se pueden programar citas los domingos.",
+                confirmButtonText: "Cerrar"
+            });
+            return;
+        }
+
+        // Cargar médicos disponibles para esa fecha y tipo de cita
+        intentarCargarMedicos();
+
+        var horaInput  = document.getElementById("nuevaCitaHora");
+        var maxHora    = diaSemana === 6 ? "13:30" : "19:50"; // sábado o lun-vie
+        horaInput.max  = maxHora;
+
+        // Si ya tenía una hora fuera del nuevo max, limpiarla
+        if (horaInput.value && horaInput.value > maxHora) {
+            horaInput.value = "";
+        }
+
+        var hoy    = new Date();
         var hoyStr = hoy.getFullYear() + "-" +
                      String(hoy.getMonth() + 1).padStart(2, "0") + "-" +
                      String(hoy.getDate()).padStart(2, "0");
+        var hh     = String(hoy.getHours()).padStart(2, "0");
+        var mm     = String(hoy.getMinutes()).padStart(2, "0");
+        var horaAhora = hh + ":" + mm;
 
         if (this.value === hoyStr) {
-            horaInput.min = horaMin;
-            if (horaInput.value && horaInput.value <= horaMin) {
+            // Hoy: mínimo es el mayor entre 07:30 y hora actual
+            var minHora   = horaAhora >= "07:30" ? horaAhora : "07:30";
+            horaInput.min = minHora;
+            if (horaInput.value && horaInput.value < minHora) {
                 horaInput.value = "";
             }
         } else {
-            horaInput.min = "";
+            horaInput.min = "07:30";
+            if (horaInput.value && horaInput.value < "07:30") {
+                horaInput.value = "";
+            }
         }
     });
 
@@ -81,6 +115,7 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("detFecha").textContent         = formatearFecha(fecha);
             document.getElementById("detHora").textContent          = hora;
             document.getElementById("detMedico").textContent        = ep.medico;
+            document.getElementById("detTipoCita").textContent      = ep.tipo_cita;
             document.getElementById("detRecepcionista").textContent = ep.recepcionista_registra;
 
             // Badge de estado
@@ -102,9 +137,144 @@ document.addEventListener("DOMContentLoaded", function () {
         calendar.refetchEvents();
     };
 
+    // ── Variables de estado ───────────────────────────────────────────────────
+    var tiempoCitaSeleccionado = 0; // minutos del tipo de cita elegido
+
+    // Intentar cargar médicos si ya hay fecha y tipo seleccionados
+    function intentarCargarMedicos() {
+        var fecha        = document.getElementById("nuevaCitaFecha").value;
+        var selectTipo   = document.getElementById("nuevaCitaIdTipoCita");
+        var id_tipo_cita = selectTipo.value;
+        var selectMedico = document.getElementById("nuevaCitaIdMedico");
+
+        if (!fecha || !id_tipo_cita) {
+            selectMedico.innerHTML = '<option value="">Seleccione un médico</option>';
+            selectMedico.disabled  = true;
+            document.getElementById("labelMedicoInfo").textContent = "Seleccione tipo y fecha primero";
+            document.getElementById("nuevaCitaHora").value = "";
+            return;
+        }
+
+        // Guardar tiempo del tipo seleccionado
+        var optionSeleccionada = selectTipo.options[selectTipo.selectedIndex];
+        tiempoCitaSeleccionado = parseInt(optionSeleccionada.getAttribute("data-tiempo")) || 0;
+
+        fetch("/Marie_stopes_pruebas/index.php?action=getMedicos&fecha=" + encodeURIComponent(fecha) + "&id_tipo_cita=" + encodeURIComponent(id_tipo_cita))
+            .then(function(res) { return res.json(); })
+            .then(function(medicos) {
+                selectMedico.innerHTML = '<option value="">Seleccione un médico (Opcional)</option>';
+                if (medicos.length === 0) {
+                    document.getElementById("labelMedicoInfo").textContent = "Sin médicos disponibles ese día";
+                    selectMedico.disabled = true;
+                } else {
+                    medicos.forEach(function(m) {
+                        var opt = document.createElement("option");
+                        opt.value = m.id_usuario;
+                        opt.textContent = m.nombre + " " + m.apellido +
+                                          " (" + m.turno_inicio.slice(0,5) + " - " + m.turno_fin.slice(0,5) + ")";
+                        opt.setAttribute("data-turno-inicio", m.turno_inicio.slice(0,5));
+                        opt.setAttribute("data-turno-fin",    m.turno_fin.slice(0,5));
+                        selectMedico.appendChild(opt);
+                    });
+                    selectMedico.disabled = false;
+                    document.getElementById("labelMedicoInfo").textContent = "Opcional";
+                }
+                // Limpiar hora al cambiar médicos disponibles
+                document.getElementById("nuevaCitaHora").value = "";
+            });
+    }
+
+    // Al cambiar tipo de cita
+    document.getElementById("nuevaCitaIdTipoCita").addEventListener("change", function() {
+        intentarCargarMedicos();
+    });
+
+    // Al cambiar médico → actualizar restricciones de hora según turno y ocupación
+    document.getElementById("nuevaCitaIdMedico").addEventListener("change", function() {
+        actualizarRestriccionesHora();
+    });
+
+    function actualizarRestriccionesHora() {
+        var fecha      = document.getElementById("nuevaCitaFecha").value;
+        var idMedico   = document.getElementById("nuevaCitaIdMedico").value;
+        var horaInput  = document.getElementById("nuevaCitaHora");
+        horaInput.value = "";
+
+        if (!idMedico || !fecha) return;
+
+        // Obtener turno del médico seleccionado
+        var selectMedico = document.getElementById("nuevaCitaIdMedico");
+        var optMedico    = selectMedico.options[selectMedico.selectedIndex];
+        var turnoInicio  = optMedico.getAttribute("data-turno-inicio");
+        var turnoFin     = optMedico.getAttribute("data-turno-fin");
+
+        // Ajustar min/max según turno del médico
+        horaInput.min = turnoInicio;
+        horaInput.max = turnoFin;
+
+        // Obtener horas ocupadas y mostrarlas como advertencia
+        fetch("/Marie_stopes_pruebas/index.php?action=getHorasOcupadas&id_medico=" + encodeURIComponent(idMedico) + "&fecha=" + encodeURIComponent(fecha))
+            .then(function(res) { return res.json(); })
+            .then(function(ocupadas) {
+                // Guardar en variable global para validar al elegir hora
+                window.horasOcupadasMedico = ocupadas;
+
+                if (ocupadas.length > 0) {
+                    var lista = ocupadas.map(function(o) {
+                        var fin = sumarMinutos(o.hora.slice(0,5), o.tiempo);
+                        return o.hora.slice(0,5) + " - " + fin;
+                    }).join(", ");
+                    document.getElementById("labelMedicoInfo").textContent = "Bloqueado: " + lista;
+                } else {
+                    document.getElementById("labelMedicoInfo").textContent = "Sin citas ese día";
+                }
+            });
+    }
+
+    // Validar hora elegida contra citas ocupadas
+    document.getElementById("nuevaCitaHora").addEventListener("change", function() {
+        var horaElegida  = this.value;
+        var duracion     = tiempoCitaSeleccionado;
+        var ocupadas     = window.horasOcupadasMedico || [];
+
+        if (!horaElegida || !duracion) return;
+
+        var inicioNueva = horaAMinutos(horaElegida);
+        var finNueva    = inicioNueva + duracion;
+
+        var conflicto = ocupadas.some(function(o) {
+            var inicioOcup = horaAMinutos(o.hora.slice(0,5));
+            var finOcup    = inicioOcup + parseInt(o.tiempo);
+            // Hay conflicto si los rangos se solapan
+            return inicioNueva < finOcup && finNueva > inicioOcup;
+        });
+
+        if (conflicto) {
+            Swal.fire({
+                icon: "warning",
+                title: "Hora no disponible",
+                text: "El médico ya tiene una cita en ese horario. Por favor elige otra hora.",
+                confirmButtonText: "Cerrar"
+            });
+            this.value = "";
+        }
+    });
+
+    // Helpers
+    function horaAMinutos(hora) {
+        var partes = hora.split(":");
+        return parseInt(partes[0]) * 60 + parseInt(partes[1]);
+    }
+
+    function sumarMinutos(hora, minutos) {
+        var total = horaAMinutos(hora) + parseInt(minutos);
+        var h = Math.floor(total / 60) % 24;
+        var m = total % 60;
+        return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0");
+    }
+
     // Cargar médicos al abrir el modal
     document.getElementById("btnAbrirModalCita").addEventListener("click", function () {
-        cargarMedicos();
         limpiarModal();
         $("#modalAgregarCita").modal("show");
     });
@@ -239,21 +409,6 @@ document.addEventListener("DOMContentLoaded", function () {
         return partes[2] + "/" + partes[1] + "/" + partes[0];
     }
 
-    function cargarMedicos() {
-        fetch("index.php?action=getMedicos")
-            .then(function (res) { return res.json(); })
-            .then(function (medicos) {
-                var select = document.getElementById("nuevaCitaIdMedico");
-                select.innerHTML = '<option value="">Seleccione un médico</option>';
-                medicos.forEach(function (m) {
-                    var opt = document.createElement("option");
-                    opt.value       = m.id_usuario;
-                    opt.textContent = m.nombre + " " + m.apellido;
-                    select.appendChild(opt);
-                });
-            });
-    }
-
     function limpiarFormularioNuevoPaciente() {
         document.getElementById("npNombre").value          = "";
         document.getElementById("npApellidos").value       = "";
@@ -269,7 +424,10 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("nuevaCitaIdPaciente").value      = "";
         document.getElementById("nuevaCitaFecha").value           = "";
         document.getElementById("nuevaCitaHora").value            = "";
-        document.getElementById("nuevaCitaIdMedico").value        = "";
+        document.getElementById("nuevaCitaIdTipoCita").value      = "";
+        document.getElementById("nuevaCitaIdMedico").innerHTML    = '<option value="">Seleccione un médico</option>';
+        document.getElementById("nuevaCitaIdMedico").disabled     = true;
+        document.getElementById("labelMedicoInfo").textContent    = "Seleccione tipo y fecha primero";
         document.getElementById("pacNombre").textContent          = "";
         document.getElementById("pacCI").textContent              = "";
         document.getElementById("pacFechaNac").textContent        = "";
@@ -281,6 +439,8 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("formNuevoPacienteInline").style.display = "none";
         document.getElementById("btnGuardarCita").disabled               = true;
         limpiarFormularioNuevoPaciente();
+        window.horasOcupadasMedico = [];
+        tiempoCitaSeleccionado     = 0;
     }
 
 });

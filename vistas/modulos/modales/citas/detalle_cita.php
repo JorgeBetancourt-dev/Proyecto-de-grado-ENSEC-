@@ -34,6 +34,10 @@
               <td id="detHora"></td>
             </tr>
             <tr>
+              <th><i class="fa fa-tag"></i> Tipo de cita</th>
+              <td id="detTipoCita"></td>
+            </tr>
+            <tr>
               <th><i class="fa fa-user-md"></i> Médico</th>
               <td id="detMedico"></td>
             </tr>

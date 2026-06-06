@@ -33,6 +33,7 @@ session_start();
                     "panel_cliente" => "panel_cliente.php",
                     "panel_cita" => "panel_cita.php",
                     "panel_horario" => "panel_horario.php",
+                    "panel_tipo_cita" => "panel_tipo_cita.php"
                 ];
 
                 if (isset($_GET["ruta"])) {
