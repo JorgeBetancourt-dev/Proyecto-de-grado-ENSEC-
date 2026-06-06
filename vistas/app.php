@@ -31,6 +31,7 @@ session_start();
                     "panel_examen" => "panel_examen.php",
                     "panel_medicamento" => "panel_medicamento.php",
                     "panel_cliente" => "panel_cliente.php",
+                    "panel_cita" => "panel_cita.php",
                 ];
 
                 if (isset($_GET["ruta"])) {

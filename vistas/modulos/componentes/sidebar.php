@@ -57,6 +57,11 @@ $nombresUnicos = array_unique(
                 $etiqueta = "Clientes";
                 $ruta     = "panel_cliente";
                 break;
+            case "cita":
+                $icono    = "fa fa-calendar";
+                $etiqueta = "Citas";
+                $ruta     = "panel_cita";
+                break;
         }
       ?>
       <li class="nav-item">

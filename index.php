@@ -24,6 +24,9 @@ require_once "modelos/medicamentos.modelo.php";
 //clientes
 require_once "controladores/clientes.controlador.php";
 require_once "modelos/clientes.modelo.php";
+// Citas
+require_once "controladores/citas.controlador.php";
+require_once "modelos/citas.modelo.php";
 
 ControladorUsuarios::ctrEliminarUsuarios();
 ControladorUsuarios::ctrEditarUsuarios();
@@ -56,6 +59,43 @@ ControladorMedicamentos::ctrEliminarMedicamento();
 ControladorClientes::crtCrearCliente();
 ControladorClientes::ctrEditarCliente();
 ControladorClientes::ctrEliminarCliente();
+
+ControladorCitas::ctrCrearPacienteDesdeCita();         // AJAX POST: registrar paciente inline
+ControladorCitas::ctrBuscarPacientePorCarnet();        // AJAX: buscar paciente por carnet
+ControladorCitas::ctrMostrarMedicos();                 // AJAX: obtener lista de médicos
+ControladorCitas::crtCrearCita();                      // POST: registrar nueva cita
+ 
+// AJAX para FullCalendar — va junto al bloque de getPermisosPorRol
+if (isset($_GET["action"]) && $_GET["action"] == "getCitas") {
+    session_start();
+    if (!isset($_SESSION["IdUsuario"])) {
+        echo json_encode(["error" => "No autorizado"]);
+        exit;
+    }
+    header("Content-Type: application/json");
+    $citas   = ModeloCitas::mdlMostrarCitasCalendario();
+    $eventos = [];
+    foreach ($citas as $c) {
+        $colores = ["pendiente" => "#3788d8", "atendida" => "#28a745", "cancelada" => "#dc3545"];
+        $color   = $colores[$c["estado"]] ?? "#3788d8";
+        $eventos[] = [
+            "id"              => $c["id_cita"],
+            "title"           => $c["pac_nombre"] . " " . $c["pac_apellidos"],
+            "start"           => $c["fecha"] . "T" . $c["hora"],
+            "backgroundColor" => $color,
+            "borderColor"     => $color,
+            "extendedProps"   => [
+                "estado"                 => $c["estado"],
+                "pac_ci"                 => $c["pac_ci"],
+                "pac_telefono"           => $c["pac_telefono"],
+                "medico"                 => $c["medico"] ?? "Sin asignar",
+                "recepcionista_registra" => $c["recepcionista_registra"]
+            ]
+        ];
+    }
+    echo json_encode($eventos);
+    exit;
+}   
 
 if (isset($_GET["action"]) && $_GET["action"] == "getPermisosPorRol") {
     $permisos = ControladorRoles::ctrMostrarPermisosPorRol((int)$_GET["id_rol"]);
