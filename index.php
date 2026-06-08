@@ -66,10 +66,13 @@ ControladorClientes::crtCrearCliente();
 ControladorClientes::ctrEditarCliente();
 ControladorClientes::ctrEliminarCliente();
 
+ControladorCitas::ctrReprogramarCita();                // AJAX POST: reprogramar cita
 ControladorCitas::ctrCrearPacienteDesdeCita();         // AJAX POST: registrar paciente inline
 ControladorCitas::ctrBuscarPacientePorCarnet();        // AJAX: buscar paciente por carnet
 ControladorCitas::ctrMostrarMedicos();                 // AJAX: obtener médicos filtrados por horario
 ControladorCitas::ctrHorasOcupadas();                  // AJAX: horas ocupadas de un médico
+ControladorCitas::ctrObtenerCita();                    // AJAX: datos de una cita
+ControladorCitas::ctrCancelarCita();                   // AJAX POST: cancelar cita
 ControladorCitas::crtCrearCita();                      // POST: registrar nueva cita
  
 
@@ -80,8 +83,9 @@ ControladorHorarios::ctrEliminarHorario();
 ControladorTipoCita::crtCrearTipoCita();
 ControladorTipoCita::ctrEditarTipoCita();
 ControladorTipoCita::ctrEliminarTipoCita();
- 
-// AJAX para FullCalendar — va junto al bloque de getPermisosPorRol
+
+
+//AJAX para FullCalendar — va junto al bloque de getPermisosPorRol
 if (isset($_GET["action"]) && $_GET["action"] == "getCitas") {
     session_start();
     if (!isset($_SESSION["IdUsuario"])) {
@@ -105,7 +109,7 @@ if (isset($_GET["action"]) && $_GET["action"] == "getCitas") {
                 "pac_ci"                 => $c["pac_ci"],
                 "pac_telefono"           => $c["pac_telefono"],
                 "medico"                 => $c["medico"] ?? "Sin asignar",
-                "recepcionista_registra" => $c["recepcionista_registra"],
+                "recepcionista"          => $c["recepcionista_registra"],
                         "tipo_cita"              => $c["tipo_cita"] ?? "Sin especificar"
             ]
         ];
@@ -113,6 +117,8 @@ if (isset($_GET["action"]) && $_GET["action"] == "getCitas") {
     echo json_encode($eventos);
     exit;
 }
+
+
 
 if (isset($_GET["action"]) && $_GET["action"] == "getPermisosPorRol") {
     $permisos = ControladorRoles::ctrMostrarPermisosPorRol((int)$_GET["id_rol"]);

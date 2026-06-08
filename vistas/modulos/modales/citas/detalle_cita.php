@@ -53,7 +53,14 @@
         <button type="button" data-dismiss="modal" class="btn btn-default">
           <i class="fa fa-times"></i> Cerrar
         </button>
+        <button type="button" class="btn btn-danger" id="btnCancelarCita" style="display:none;">
+          <i class="fa fa-ban"></i> Cancelar cita
+        </button>
+        <button type="button" class="btn btn-warning" id="btnAbrirReprogramar">
+          <i class="fa fa-refresh"></i> Reprogramar
+        </button>
       </div>
+      <input type="hidden" id="detIdCita">
     </div>
   </div>
 </div>

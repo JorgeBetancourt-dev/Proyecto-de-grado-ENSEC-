@@ -30,7 +30,7 @@ $todosPermisos = ControladorPermisos::ctrMostrarPermisos(null, null);
   <div class="col-6 pt-3">
     <div class="box-body">
       <div class="pb-2"><h3>Roles</h3></div>
-      <table class="table table-bordered table-striped tablas" width="100%">
+      <table class="table table-bordered table-striped" width="100%">
         <thead>
           <tr>
             <th>#</th>
@@ -80,7 +80,7 @@ $todosPermisos = ControladorPermisos::ctrMostrarPermisos(null, null);
         <h3 style="display:inline; visibility:hidden;" id="tituloFiltro"> filtrados por </h3>
         <h3 style="display:inline; visibility:hidden; color:#6c63ff;" id="nombreRolFiltro"></h3>
       </div>
-      <table class="table table-bordered table-striped tablas" width="100%">
+      <table class="table table-bordered table-striped" width="100%">
         <thead>
           <tr>
             <th>#</th>

@@ -14,7 +14,7 @@ include "vistas/assets/eventos/horarios.eventos.php";
 <div class="row">
   <div class="col-12">
     <div class="box-body pt-3">
-      <table class="table table-bordered table-striped tablas" width="100%">
+      <table class="table table-bordered table-striped" width="100%">
         <thead>
           <tr>
             <th>#</th>

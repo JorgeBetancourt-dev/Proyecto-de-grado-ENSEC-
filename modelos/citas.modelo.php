@@ -51,9 +51,9 @@ class ModeloCitas {
              FROM citas c
              INNER JOIN pacientes p ON c.id_paciente = p.id_paciente
              LEFT  JOIN usuarios m    ON c.id_medico = m.id_usuario
-             LEFT  JOIN usuarios r    ON c.id_recepcionista_registra = r.id_usuario
+             LEFT  JOIN usuarios r    ON c.id_recepcionista = r.id_usuario
              LEFT  JOIN tipo_cita tc  ON c.id_tipo_cita = tc.id_tipo_cita
-             WHERE c.activo = 1
+             WHERE c.activo = 1 AND c.reprogramada = 0
              ORDER BY c.fecha ASC, c.hora ASC"
         );
         $stmt->execute();
@@ -92,17 +92,20 @@ class ModeloCitas {
     }
 
     // Obtener horas ocupadas de un médico en una fecha, con duración de cada cita
-    static public function mdlHorasOcupadasMedico($id_medico, $fecha) {
-        $stmt = Conexion::conectar()->prepare(
-            "SELECT c.hora, tc.tiempo
-             FROM citas c
-             INNER JOIN tipo_cita tc ON tc.id_tipo_cita = c.id_tipo_cita
-             WHERE c.id_medico = :id_medico
-               AND c.fecha     = :fecha
-               AND c.activo    = 1
-               AND c.estado   != 'cancelada'
-             ORDER BY c.hora ASC"
-        );
+    static public function mdlHorasOcupadasMedico($id_medico, $fecha, $excluir_cita = null) {
+        $sql = "SELECT c.hora, tc.tiempo
+                FROM citas c
+                INNER JOIN tipo_cita tc ON tc.id_tipo_cita = c.id_tipo_cita
+                WHERE c.id_medico = :id_medico
+                  AND c.fecha     = :fecha
+                  AND c.activo    = 1
+                  AND c.estado   != 'cancelada'";
+        if ($excluir_cita !== null && is_numeric($excluir_cita)) {
+            $sql .= " AND c.id_cita != " . (int)$excluir_cita;
+        }
+        $sql .= " ORDER BY c.hora ASC";
+
+        $stmt = Conexion::conectar()->prepare($sql);
         $stmt->bindParam(":id_medico", $id_medico, PDO::PARAM_INT);
         $stmt->bindParam(":fecha",     $fecha,      PDO::PARAM_STR);
         $stmt->execute();
@@ -112,22 +115,83 @@ class ModeloCitas {
         return $resultado;
     }
 
-    // Registrar nueva cita (paso 1)
+    // Obtener una cita por id (para poblar el modal de reprogramar)
+    static public function mdlObtenerCita($id_cita) {
+        $stmt = Conexion::conectar()->prepare(
+            "SELECT c.*, 
+                    p.nombre AS pac_nombre, p.apellidos AS pac_apellidos, p.ci AS pac_ci,
+                    tc.tiempo AS tipo_tiempo
+             FROM citas c
+             INNER JOIN pacientes p  ON c.id_paciente  = p.id_paciente
+             INNER JOIN tipo_cita tc ON c.id_tipo_cita = tc.id_tipo_cita
+             WHERE c.id_cita = :id_cita AND c.activo = 1"
+        );
+        $stmt->bindParam(":id_cita", $id_cita, PDO::PARAM_INT);
+        $stmt->execute();
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->closeCursor();
+        $stmt = null;
+        return $resultado;
+    }
+
+    // Marcar cita original como reprogramada
+    static public function mdlMarcarReprogramada($id_cita) {
+        $stmt = Conexion::conectar()->prepare(
+            "UPDATE citas SET reprogramada = 1 WHERE id_cita = :id_cita"
+        );
+        $stmt->bindParam(":id_cita", $id_cita, PDO::PARAM_INT);
+        return $stmt->execute() ? "ok" : "error";
+    }
+
+    // Crear nueva cita como reprogramación
+    static public function mdlReprogramarCita($datos) {
+        $conn = Conexion::conectar();
+        $stmt = $conn->prepare(
+            "INSERT INTO citas
+                (id_paciente, id_recepcionista, id_medico, id_tipo_cita, fecha, hora, estado, reprogramada, id_cita_original, activo)
+             VALUES
+                (:id_paciente, :id_recepcionista, :id_medico, :id_tipo_cita, :fecha, :hora, 'pendiente', 0, :id_cita_original, 1)"
+        );
+        $stmt->bindParam(":id_paciente",      $datos["id_paciente"],      PDO::PARAM_INT);
+        $stmt->bindParam(":id_recepcionista", $datos["id_recepcionista"], PDO::PARAM_INT);
+        $stmt->bindParam(":id_medico",        $datos["id_medico"],        PDO::PARAM_INT);
+        $stmt->bindParam(":id_tipo_cita",     $datos["id_tipo_cita"],     PDO::PARAM_INT);
+        $stmt->bindParam(":fecha",            $datos["fecha"],            PDO::PARAM_STR);
+        $stmt->bindParam(":hora",             $datos["hora"],             PDO::PARAM_STR);
+        $stmt->bindParam(":id_cita_original", $datos["id_cita_original"], PDO::PARAM_INT);
+        return $stmt->execute() ? "ok" : "error";
+    }
+
+    // Registrar nueva cita 
     static public function mdlCrearCita($datos) {
         $stmt = Conexion::conectar()->prepare(
             "INSERT INTO citas 
-                (id_paciente, id_recepcionista_registra, id_recepcionista_asigna, id_medico, id_tipo_cita, fecha, hora, estado, activo) 
+                (id_paciente, id_recepcionista, id_medico, id_tipo_cita, fecha, hora, estado, activo) 
              VALUES 
-                (:id_paciente, :id_recepcionista_registra, :id_recepcionista_asigna, :id_medico, :id_tipo_cita, :fecha, :hora, 'pendiente', 1)"
+                (:id_paciente, :id_recepcionista, :id_medico, :id_tipo_cita, :fecha, :hora, 'pendiente', 1)"
         );
         $stmt->bindParam(":id_paciente",                $datos["id_paciente"],               PDO::PARAM_INT);
-        $stmt->bindParam(":id_recepcionista_registra",  $datos["id_recepcionista_registra"],  PDO::PARAM_INT);
-        $stmt->bindValue(":id_recepcionista_asigna",    $datos["id_recepcionista_asigna"],    $datos["id_recepcionista_asigna"] === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $stmt->bindParam(":id_recepcionista",  $datos["id_recepcionista"],  PDO::PARAM_INT);
+        
         $stmt->bindValue(":id_medico",                  $datos["id_medico"],                  $datos["id_medico"]               === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
         $stmt->bindValue(":id_tipo_cita",               $datos["id_tipo_cita"],               $datos["id_tipo_cita"]            === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
         $stmt->bindParam(":fecha",                      $datos["fecha"],                      PDO::PARAM_STR);
         $stmt->bindParam(":hora",                       $datos["hora"],                       PDO::PARAM_STR);
         return $stmt->execute() ? "ok" : "error";
+    }
+    // Cancelar cita (borrado lógico: activo = 0, estado = 'cancelada')
+    static public function mdlCancelarCita($id_cita) {
+        $stmt = Conexion::conectar()->prepare(
+            "UPDATE citas 
+             SET activo = 0, estado = 'cancelada' 
+             WHERE id_cita = :id_cita AND activo = 1 AND estado = 'pendiente'"
+        );
+        $stmt->bindParam(":id_cita", $id_cita, PDO::PARAM_INT);
+        $stmt->execute();
+        $afectadas = $stmt->rowCount();
+        $stmt->closeCursor();
+        $stmt = null;
+        return $afectadas > 0 ? "ok" : "error";
     }
 }
 ?>

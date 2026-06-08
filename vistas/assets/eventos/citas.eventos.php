@@ -1,446 +1,321 @@
 <?php if (isset($_SESSION["crear_cita"])): ?>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        <?php if ($_SESSION["crear_cita"] == "ok"): ?>
-        Swal.fire({ icon: "success", title: "¡Cita registrada correctamente!", confirmButtonText: "Cerrar" })
-            .then(function () { if (window.refrescarCalendario) window.refrescarCalendario(); });
-        <?php elseif ($_SESSION["crear_cita"] == "domingo"): ?>
-        Swal.fire({ icon: "warning", title: "Día no disponible", text: "No se pueden registrar citas los domingos.", confirmButtonText: "Cerrar" });
-        <?php elseif ($_SESSION["crear_cita"] == "hora_no_permitida"): ?>
-        Swal.fire({ icon: "warning", title: "Hora no permitida", text: "El horario de atención es de 07:30 a 19:50 (Lun-Vie) y de 07:30 a 13:30 los sábados.", confirmButtonText: "Cerrar" });
-        <?php elseif ($_SESSION["crear_cita"] == "fecha_pasada"): ?>
-        Swal.fire({ icon: "warning", title: "Fecha u hora no válida", text: "No se pueden registrar citas en una fecha u hora anterior a la actual.", confirmButtonText: "Cerrar" });
-        <?php else: ?>
-        Swal.fire({ icon: "error", title: "¡Error al registrar la cita!", text: "Verifica los datos e intenta nuevamente.", confirmButtonText: "Cerrar" });
-        <?php endif; ?>
-    });
+document.addEventListener("DOMContentLoaded", function() {
+    var msgs = {
+        ok:              { icon: "success", title: "¡Cita registrada correctamente!" },
+        domingo:         { icon: "warning", title: "Día no disponible",       text: "No se pueden registrar citas los domingos." },
+        hora_no_permitida: { icon: "warning", title: "Hora no permitida",     text: "El horario de atención es de 07:30 a 19:50 (Lun-Vie) y de 07:30 a 13:30 los sábados." },
+        fecha_pasada:    { icon: "warning", title: "Fecha u hora no válida",  text: "No se pueden registrar citas en una fecha u hora anterior a la actual." }
+    };
+    var cfg = msgs["<?= $_SESSION['crear_cita'] ?>"] || { icon: "error", title: "¡Error al registrar la cita!", text: "Verifica los datos e intenta nuevamente." };
+    cfg.confirmButtonText = "Cerrar";
+    Swal.fire(cfg).then(function() { if (cfg.icon === "success" && window.refrescarCalendario) window.refrescarCalendario(); });
+});
 </script>
 <?php unset($_SESSION["crear_cita"]); endif; ?>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-    // Controlar la fecha: bloquear domingos y ajustar min/max de hora
-    document.getElementById("nuevaCitaFecha").addEventListener("change", function () {
-        var fechaSeleccionada = new Date(this.value + "T00:00:00");
-        var diaSemana         = fechaSeleccionada.getDay(); // 0=domingo, 6=sábado
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    var id  = function(s) { return document.getElementById(s); };
+    var txt = function(s, v) { id(s).textContent = v; };
+    var val = function(s, v) { if (v !== undefined) id(s).value = v; return id(s).value; };
 
-        // Si eligió domingo, limpiar y avisar
-        if (diaSemana === 0) {
-            this.value = "";
-            document.getElementById("nuevaCitaHora").value = "";
-            Swal.fire({
-                icon: "warning",
-                title: "Día no disponible",
-                text: "No se pueden programar citas los domingos.",
-                confirmButtonText: "Cerrar"
-            });
+    function horaAMinutos(h) { var p = h.split(":"); return +p[0] * 60 + +p[1]; }
+    function sumarMinutos(h, m) {
+        var t = horaAMinutos(h) + +m;
+        return String(Math.floor(t/60)%24).padStart(2,"0") + ":" + String(t%60).padStart(2,"0");
+    }
+    function formatearFecha(f) { if (!f) return ""; var p = f.split("-"); return p[2]+"/"+p[1]+"/"+p[0]; }
+    function fetchJson(url) { return fetch(url).then(function(r) { return r.json(); }); }
+    function postJson(url, data) {
+        return fetch(url, { method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body: new URLSearchParams(data) })
+               .then(function(r) { return r.json(); });
+    }
+    function swal(opts) { return Swal.fire(Object.assign({ confirmButtonText: "Cerrar" }, opts)); }
+
+    function construirOpcionesMedicos(select, medicos, labelId) {
+        select.innerHTML = '<option value="">Seleccione un médico</option>';
+        if (!medicos.length) {
+            txt(labelId, "Sin médicos disponibles ese día");
+            select.disabled = true;
             return;
         }
+        medicos.forEach(function(m) {
+            var o = document.createElement("option");
+            o.value = m.id_usuario;
+            o.textContent = m.nombre + " " + m.apellido + " (" + m.turno_inicio.slice(0,5) + " - " + m.turno_fin.slice(0,5) + ")";
+            o.setAttribute("data-turno-inicio", m.turno_inicio.slice(0,5));
+            o.setAttribute("data-turno-fin",    m.turno_fin.slice(0,5));
+            select.appendChild(o);
+        });
+        select.disabled = false;
+        txt(labelId, "Disponible");
+    }
 
-        // Cargar médicos disponibles para esa fecha y tipo de cita
-        intentarCargarMedicos();
+    function validarConflictoHora(horaVal, tiempo, ocupadas, inputEl) {
+        if (!horaVal || !tiempo) return;
+        var ini = horaAMinutos(horaVal), fin = ini + tiempo;
+        var conflicto = ocupadas.some(function(o) {
+            var oi = horaAMinutos(o.hora.slice(0,5)), of2 = oi + +o.tiempo;
+            return ini < of2 && fin > oi;
+        });
+        if (conflicto) { swal({ icon:"warning", title:"Hora no disponible", text:"El médico ya tiene una cita en ese horario." }); inputEl.value = ""; }
+    }
 
-        var horaInput  = document.getElementById("nuevaCitaHora");
-        var maxHora    = diaSemana === 6 ? "13:30" : "19:50"; // sábado o lun-vie
-        horaInput.max  = maxHora;
+    function cargarHorasOcupadas(idMedico, fecha, labelId, storageKey, excluirCita) {
+        var url = "/Marie_stopes_pruebas/index.php?action=getHorasOcupadas&id_medico=" + encodeURIComponent(idMedico) + "&fecha=" + encodeURIComponent(fecha);
+        if (excluirCita) url += "&excluir_cita=" + encodeURIComponent(excluirCita);
+        fetchJson(url).then(function(ocupadas) {
+            window[storageKey] = ocupadas;
+            txt(labelId, ocupadas.length
+                ? "Bloqueado: " + ocupadas.map(function(o) { return o.hora.slice(0,5)+" - "+sumarMinutos(o.hora.slice(0,5),o.tiempo); }).join(", ")
+                : "Sin citas ese día");
+        });
+    }
 
-        // Si ya tenía una hora fuera del nuevo max, limpiarla
-        if (horaInput.value && horaInput.value > maxHora) {
-            horaInput.value = "";
-        }
-
-        var hoy    = new Date();
-        var hoyStr = hoy.getFullYear() + "-" +
-                     String(hoy.getMonth() + 1).padStart(2, "0") + "-" +
-                     String(hoy.getDate()).padStart(2, "0");
-        var hh     = String(hoy.getHours()).padStart(2, "0");
-        var mm     = String(hoy.getMinutes()).padStart(2, "0");
-        var horaAhora = hh + ":" + mm;
-
-        if (this.value === hoyStr) {
-            // Hoy: mínimo es el mayor entre 07:30 y hora actual
-            var minHora   = horaAhora >= "07:30" ? horaAhora : "07:30";
-            horaInput.min = minHora;
-            if (horaInput.value && horaInput.value < minHora) {
-                horaInput.value = "";
-            }
-        } else {
-            horaInput.min = "07:30";
-            if (horaInput.value && horaInput.value < "07:30") {
-                horaInput.value = "";
-            }
-        }
-    });
+    // ── Variables de estado ───────────────────────────────────────────────────
+    var tiempoCita = 0, repTiempo = 0, repIdCita = null;
 
     // ── FullCalendar ──────────────────────────────────────────────────────────
-    var calendarEl = document.getElementById("calendarioCitas");
-    var calendar   = new FullCalendar.Calendar(calendarEl, {
-        locale:          "es",
-        initialView:     "timeGridWeek",
-        headerToolbar: {
-            left:   "prev,next today",
-            center: "title",
-            right:  "dayGridMonth,timeGridWeek,timeGridDay"
+    var calendar = new FullCalendar.Calendar(id("calendarioCitas"), {
+        locale: "es", initialView: "timeGridWeek", height: "auto", nowIndicator: true,
+        headerToolbar: { left:"prev,next today", center:"title", right:"dayGridMonth,timeGridWeek,timeGridDay" },
+        buttonText: { today:"Hoy", month:"Mes", week:"Semana", day:"Día" },
+        events: function(info, ok, fail) {
+            fetchJson("/Marie_stopes_pruebas/index.php?action=getCitas").then(ok).catch(fail);
         },
-        buttonText: {
-            today:  "Hoy",
-            month:  "Mes",
-            week:   "Semana",
-            day:    "Día"
-        },
-        height:       "auto",
-        nowIndicator: true,
-        events: function (info, successCallback, failureCallback) {
-            fetch("/Marie_stopes_pruebas/index.php?action=getCitas")
-                .then(function (res) { return res.json(); })
-                .then(function (data) { successCallback(data); })
-                .catch(function () { failureCallback(); });
-        },
-        eventClick: function (info) {
-            var e  = info.event;
-            var ep = e.extendedProps;
+        eventClick: function(info) {
+            var e = info.event, ep = e.extendedProps, s = e.start;
+            repIdCita = e.id;
+            var fecha = s.getFullYear()+"-"+String(s.getMonth()+1).padStart(2,"0")+"-"+String(s.getDate()).padStart(2,"0");
+            var hora  = String(s.getHours()).padStart(2,"0")+":"+String(s.getMinutes()).padStart(2,"0");
 
-            // Poblar modal de detalle
-            var start = e.start;
-            var fecha = start.getFullYear() + "-" +
-                        String(start.getMonth() + 1).padStart(2, "0") + "-" +
-                        String(start.getDate()).padStart(2, "0");
-            var hora  = String(start.getHours()).padStart(2, "0") + ":" +
-                        String(start.getMinutes()).padStart(2, "0");
+            // Poblar modal detalle
+            txt("detPaciente", e.title);  txt("detCI", ep.pac_ci);    txt("detTelefono", ep.pac_telefono);
+            txt("detFecha", formatearFecha(fecha)); txt("detHora", hora);
+            txt("detMedico", ep.medico);  txt("detTipoCita", ep.tipo_cita); txt("detRecepcionista", ep.recepcionista);
+            val("detIdCita", e.id);
 
-            document.getElementById("detPaciente").textContent      = e.title;
-            document.getElementById("detCI").textContent            = ep.pac_ci;
-            document.getElementById("detTelefono").textContent      = ep.pac_telefono;
-            document.getElementById("detFecha").textContent         = formatearFecha(fecha);
-            document.getElementById("detHora").textContent          = hora;
-            document.getElementById("detMedico").textContent        = ep.medico;
-            document.getElementById("detTipoCita").textContent      = ep.tipo_cita;
-            document.getElementById("detRecepcionista").textContent = ep.recepcionista_registra;
+            // Poblar modal reprogramar
+            val("repIdCitaOriginal", e.id); txt("repPaciente", e.title);
+            txt("repFechaActual", formatearFecha(fecha)); txt("repHoraActual", hora); txt("repMedicoActual", ep.medico);
 
             // Badge de estado
-            var badge  = document.getElementById("detEstadoBadge");
-            var colores = { pendiente: "#3788d8", atendida: "#28a745", cancelada: "#dc3545" };
-            badge.textContent             = ep.estado.charAt(0).toUpperCase() + ep.estado.slice(1);
-            badge.style.backgroundColor   = colores[ep.estado] || "#3788d8";
-            badge.style.color             = "#fff";
+            var badge = id("detEstadoBadge"), colores = { pendiente:"#3788d8", atendida:"#28a745", cancelada:"#dc3545" };
+            badge.textContent = ep.estado.charAt(0).toUpperCase() + ep.estado.slice(1);
+            badge.style.backgroundColor = colores[ep.estado] || "#3788d8";
+            badge.style.color = "#fff";
+
+            // Botones según estado
+            var visible = ep.estado === "pendiente" ? "inline-block" : "none";
+            id("btnAbrirReprogramar").style.display = visible;
+            id("btnCancelarCita").style.display     = visible;
 
             $("#modalDetalleCita").modal("show");
         }
     });
     calendar.render();
-    // ─────────────────────────────────────────────────────────────────────────
+    window.refrescarCalendario = function() { calendar.refetchEvents(); };
 
-    // Refrescar calendario al registrar una cita exitosamente
-    // (se llama desde el evento de crear_cita ok)
-    window.refrescarCalendario = function () {
-        calendar.refetchEvents();
-    };
-
-    // ── Variables de estado ───────────────────────────────────────────────────
-    var tiempoCitaSeleccionado = 0; // minutos del tipo de cita elegido
-
-    // Intentar cargar médicos si ya hay fecha y tipo seleccionados
-    function intentarCargarMedicos() {
-        var fecha        = document.getElementById("nuevaCitaFecha").value;
-        var selectTipo   = document.getElementById("nuevaCitaIdTipoCita");
-        var id_tipo_cita = selectTipo.value;
-        var selectMedico = document.getElementById("nuevaCitaIdMedico");
-
-        if (!fecha || !id_tipo_cita) {
-            selectMedico.innerHTML = '<option value="">Seleccione un médico</option>';
-            selectMedico.disabled  = true;
-            document.getElementById("labelMedicoInfo").textContent = "Seleccione tipo y fecha primero";
-            document.getElementById("nuevaCitaHora").value = "";
-            return;
-        }
-
-        // Guardar tiempo del tipo seleccionado
-        var optionSeleccionada = selectTipo.options[selectTipo.selectedIndex];
-        tiempoCitaSeleccionado = parseInt(optionSeleccionada.getAttribute("data-tiempo")) || 0;
-
-        fetch("/Marie_stopes_pruebas/index.php?action=getMedicos&fecha=" + encodeURIComponent(fecha) + "&id_tipo_cita=" + encodeURIComponent(id_tipo_cita))
-            .then(function(res) { return res.json(); })
-            .then(function(medicos) {
-                selectMedico.innerHTML = '<option value="">Seleccione un médico (Opcional)</option>';
-                if (medicos.length === 0) {
-                    document.getElementById("labelMedicoInfo").textContent = "Sin médicos disponibles ese día";
-                    selectMedico.disabled = true;
-                } else {
-                    medicos.forEach(function(m) {
-                        var opt = document.createElement("option");
-                        opt.value = m.id_usuario;
-                        opt.textContent = m.nombre + " " + m.apellido +
-                                          " (" + m.turno_inicio.slice(0,5) + " - " + m.turno_fin.slice(0,5) + ")";
-                        opt.setAttribute("data-turno-inicio", m.turno_inicio.slice(0,5));
-                        opt.setAttribute("data-turno-fin",    m.turno_fin.slice(0,5));
-                        selectMedico.appendChild(opt);
-                    });
-                    selectMedico.disabled = false;
-                    document.getElementById("labelMedicoInfo").textContent = "Opcional";
-                }
-                // Limpiar hora al cambiar médicos disponibles
-                document.getElementById("nuevaCitaHora").value = "";
-            });
-    }
-
-    // Al cambiar tipo de cita
-    document.getElementById("nuevaCitaIdTipoCita").addEventListener("change", function() {
-        intentarCargarMedicos();
+    // ── Detalle: Reprogramar ──────────────────────────────────────────────────
+    id("btnAbrirReprogramar").addEventListener("click", function() {
+        $("#modalDetalleCita").modal("hide");
+        setTimeout(function() { limpiarModalReprogramar(); $("#modalReprogramarCita").modal("show"); }, 400);
     });
 
-    // Al cambiar médico → actualizar restricciones de hora según turno y ocupación
-    document.getElementById("nuevaCitaIdMedico").addEventListener("change", function() {
-        actualizarRestriccionesHora();
-    });
-
-    function actualizarRestriccionesHora() {
-        var fecha      = document.getElementById("nuevaCitaFecha").value;
-        var idMedico   = document.getElementById("nuevaCitaIdMedico").value;
-        var horaInput  = document.getElementById("nuevaCitaHora");
-        horaInput.value = "";
-
-        if (!idMedico || !fecha) return;
-
-        // Obtener turno del médico seleccionado
-        var selectMedico = document.getElementById("nuevaCitaIdMedico");
-        var optMedico    = selectMedico.options[selectMedico.selectedIndex];
-        var turnoInicio  = optMedico.getAttribute("data-turno-inicio");
-        var turnoFin     = optMedico.getAttribute("data-turno-fin");
-
-        // Ajustar min/max según turno del médico
-        horaInput.min = turnoInicio;
-        horaInput.max = turnoFin;
-
-        // Obtener horas ocupadas y mostrarlas como advertencia
-        fetch("/Marie_stopes_pruebas/index.php?action=getHorasOcupadas&id_medico=" + encodeURIComponent(idMedico) + "&fecha=" + encodeURIComponent(fecha))
-            .then(function(res) { return res.json(); })
-            .then(function(ocupadas) {
-                // Guardar en variable global para validar al elegir hora
-                window.horasOcupadasMedico = ocupadas;
-
-                if (ocupadas.length > 0) {
-                    var lista = ocupadas.map(function(o) {
-                        var fin = sumarMinutos(o.hora.slice(0,5), o.tiempo);
-                        return o.hora.slice(0,5) + " - " + fin;
-                    }).join(", ");
-                    document.getElementById("labelMedicoInfo").textContent = "Bloqueado: " + lista;
+    // ── Detalle: Cancelar cita ────────────────────────────────────────────────
+    id("btnCancelarCita").addEventListener("click", function() {
+        swal({
+            icon:"warning", title:"¿Cancelar esta cita?",
+            html:"Se cancelará la cita de <strong>" + txt("detPaciente") + id("detPaciente").textContent + "</strong>.<br>Esta acción no se puede deshacer.",
+            showCancelButton:true, confirmButtonColor:"#dc3545", cancelButtonColor:"#6c757d",
+            confirmButtonText:'<i class="fa fa-ban"></i> Sí, cancelar', cancelButtonText:"No, volver"
+        }).then(function(r) {
+            if (!r.value) return;
+            postJson("/Marie_stopes_pruebas/index.php", { action:"cancelarCita", id_cita: val("detIdCita") })
+            .then(function(data) {
+                if (data.ok) {
+                    $("#modalDetalleCita").modal("hide");
+                    swal({ icon:"success", title:"Cita cancelada", text:"La cita ha sido cancelada correctamente." })
+                        .then(function() { if (window.refrescarCalendario) window.refrescarCalendario(); });
                 } else {
-                    document.getElementById("labelMedicoInfo").textContent = "Sin citas ese día";
+                    swal({ icon:"error", title: data.error || "Error al cancelar la cita" });
                 }
-            });
-    }
-
-    // Validar hora elegida contra citas ocupadas
-    document.getElementById("nuevaCitaHora").addEventListener("change", function() {
-        var horaElegida  = this.value;
-        var duracion     = tiempoCitaSeleccionado;
-        var ocupadas     = window.horasOcupadasMedico || [];
-
-        if (!horaElegida || !duracion) return;
-
-        var inicioNueva = horaAMinutos(horaElegida);
-        var finNueva    = inicioNueva + duracion;
-
-        var conflicto = ocupadas.some(function(o) {
-            var inicioOcup = horaAMinutos(o.hora.slice(0,5));
-            var finOcup    = inicioOcup + parseInt(o.tiempo);
-            // Hay conflicto si los rangos se solapan
-            return inicioNueva < finOcup && finNueva > inicioOcup;
+            }).catch(function() { swal({ icon:"error", title:"Error de conexión" }); });
         });
-
-        if (conflicto) {
-            Swal.fire({
-                icon: "warning",
-                title: "Hora no disponible",
-                text: "El médico ya tiene una cita en ese horario. Por favor elige otra hora.",
-                confirmButtonText: "Cerrar"
-            });
-            this.value = "";
-        }
     });
 
-    // Helpers
-    function horaAMinutos(hora) {
-        var partes = hora.split(":");
-        return parseInt(partes[0]) * 60 + parseInt(partes[1]);
-    }
-
-    function sumarMinutos(hora, minutos) {
-        var total = horaAMinutos(hora) + parseInt(minutos);
-        var h = Math.floor(total / 60) % 24;
-        var m = total % 60;
-        return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0");
-    }
-
-    // Cargar médicos al abrir el modal
-    document.getElementById("btnAbrirModalCita").addEventListener("click", function () {
-        limpiarModal();
-        $("#modalAgregarCita").modal("show");
+    // ── Reprogramar: eventos ──────────────────────────────────────────────────
+    id("repFecha").addEventListener("change", function() {
+        var d = new Date(this.value + "T00:00:00");
+        if (d.getDay() === 0) { this.value = ""; swal({ icon:"warning", title:"Día no disponible", text:"No se pueden programar citas los domingos." }); return; }
+        var horaInput = id("repHora"), maxHora = d.getDay() === 6 ? "13:30" : "19:50";
+        horaInput.max = maxHora;
+        if (horaInput.value > maxHora) horaInput.value = "";
+        cargarMedicos("rep");
+    });
+    id("repIdTipoCita").addEventListener("change", function() { cargarMedicos("rep"); });
+    id("repIdMedico").addEventListener("change", function() { actualizarHora("rep"); });
+    id("repHora").addEventListener("change", function() {
+        validarConflictoHora(this.value, repTiempo, window.repHorasOcupadas || [], this);
     });
 
-    // Buscar paciente por carnet
-    document.getElementById("btnBuscarPaciente").addEventListener("click", function () {
-        buscarPaciente();
+    // ── Agregar cita: eventos ─────────────────────────────────────────────────
+    id("btnAbrirModalCita").addEventListener("click", function() { limpiarModal(); $("#modalAgregarCita").modal("show"); });
+    id("btnBuscarPaciente").addEventListener("click", buscarPaciente);
+    id("buscarCarnet").addEventListener("keypress", function(e) { if (e.key === "Enter") { e.preventDefault(); buscarPaciente(); } });
+    id("btnNuevoPaciente").addEventListener("click", function() {
+        id("infoPaciente").style.display = id("errorPaciente").style.display = "none";
+        id("formNuevoPacienteInline").style.display = "block";
+        id("btnGuardarCita").disabled = true;
+    });
+    id("btnCancelarNuevoPaciente").addEventListener("click", function() {
+        limpiarFormPaciente(); id("formNuevoPacienteInline").style.display = "none";
+    });
+    id("nuevaCitaIdTipoCita").addEventListener("change", function() { cargarMedicos("nueva"); });
+    id("nuevaCitaIdMedico").addEventListener("change",   function() { actualizarHora("nueva"); });
+    id("nuevaCitaFecha").addEventListener("change", function() {
+        var d = new Date(this.value + "T00:00:00"), dia = d.getDay();
+        if (dia === 0) { this.value = ""; val("nuevaCitaHora",""); swal({ icon:"warning", title:"Día no disponible", text:"No se pueden programar citas los domingos." }); return; }
+        var hi = id("nuevaCitaHora"), max = dia === 6 ? "13:30" : "19:50";
+        hi.max = max; if (hi.value > max) hi.value = "";
+        var hoy = new Date(), hoyStr = hoy.getFullYear()+"-"+String(hoy.getMonth()+1).padStart(2,"0")+"-"+String(hoy.getDate()).padStart(2,"0");
+        var ahora = String(hoy.getHours()).padStart(2,"0")+":"+String(hoy.getMinutes()).padStart(2,"0");
+        hi.min = (this.value === hoyStr) ? (ahora >= "07:30" ? ahora : "07:30") : "07:30";
+        if (hi.value < hi.min) hi.value = "";
+        cargarMedicos("nueva");
+    });
+    id("nuevaCitaHora").addEventListener("change", function() {
+        validarConflictoHora(this.value, tiempoCita, window.horasOcupadasMedico || [], this);
     });
 
-    // También buscar al presionar Enter en el campo carnet
-    document.getElementById("buscarCarnet").addEventListener("keypress", function (e) {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            buscarPaciente();
-        }
-    });
-
-    // Botón Nuevo Paciente: muestra el formulario inline
-    document.getElementById("btnNuevoPaciente").addEventListener("click", function () {
-        document.getElementById("infoPaciente").style.display            = "none";
-        document.getElementById("errorPaciente").style.display           = "none";
-        document.getElementById("formNuevoPacienteInline").style.display = "block";
-        document.getElementById("btnGuardarCita").disabled               = true;
-    });
-
-    // Cancelar registro inline
-    document.getElementById("btnCancelarNuevoPaciente").addEventListener("click", function () {
-        limpiarFormularioNuevoPaciente();
-        document.getElementById("formNuevoPacienteInline").style.display = "none";
-    });
-
-    // Guardar nuevo paciente vía AJAX
-    document.getElementById("btnRegistrarNuevoPaciente").addEventListener("click", function () {
+    // ── Registrar nuevo paciente ──────────────────────────────────────────────
+    id("btnRegistrarNuevoPaciente").addEventListener("click", function() {
         var btn = this;
-        var datos = {
-            action:           "registrarPacienteCita",
-            nombre:           document.getElementById("npNombre").value.trim(),
-            apellidos:        document.getElementById("npApellidos").value.trim(),
-            ci:               document.getElementById("npCI").value.trim(),
-            grupo_sanguineo:  document.getElementById("npGrupoSanguineo").value.trim(),
-            telefono:         document.getElementById("npTelefono").value.trim(),
-            fecha_nacimiento: document.getElementById("npFechaNacimiento").value,
-            direccion:        document.getElementById("npDireccion").value.trim()
-        };
-
-        // Validar campos vacíos
-        for (var key in datos) {
-            if (key !== "action" && datos[key] === "") {
-                Swal.fire({ icon: "warning", title: "Todos los campos son obligatorios", confirmButtonText: "Cerrar" });
-                return;
-            }
+        var campos = ["npNombre","npApellidos","npCI","npGrupoSanguineo","npTelefono","npFechaNacimiento","npDireccion"];
+        for (var i = 0; i < campos.length; i++) {
+            if (!id(campos[i]).value.trim()) { swal({ icon:"warning", title:"Todos los campos son obligatorios" }); return; }
         }
-
-        // Deshabilitar botón para evitar doble envío
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Guardando...';
-
-        fetch("index.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams(datos)
-        })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-save"></i> Guardar paciente';
-
-            if (data.error) {
-                Swal.fire({ icon: "error", title: data.error, confirmButtonText: "Cerrar" });
-            } else {
-                // Ocultar formulario inline y mostrar tarjeta del paciente recién creado
-                document.getElementById("formNuevoPacienteInline").style.display = "none";
-                limpiarFormularioNuevoPaciente();
-
-                document.getElementById("infoPaciente").style.display    = "block";
-                document.getElementById("pacNombre").textContent         = data.nombre + " " + data.apellidos;
-                document.getElementById("pacCI").textContent             = data.ci;
-                document.getElementById("pacFechaNac").textContent       = formatearFecha(data.fecha_nacimiento);
-                document.getElementById("pacTelefono").textContent       = data.telefono;
-                document.getElementById("pacDireccion").textContent      = data.direccion;
-                document.getElementById("pacGrupoSanguineo").textContent = data.grupo_sanguineo;
-                document.getElementById("nuevaCitaIdPaciente").value     = data.id_paciente;
-                document.getElementById("btnGuardarCita").disabled       = false;
-
-                Swal.fire({ icon: "success", title: "Paciente registrado correctamente", confirmButtonText: "Cerrar" });
-            }
-        })
-        .catch(function () {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-save"></i> Guardar paciente';
-            Swal.fire({ icon: "error", title: "Error al registrar el paciente", confirmButtonText: "Cerrar" });
+        btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Guardando...';
+        postJson("/Marie_stopes_pruebas/index.php", {
+            action:"registrarPacienteCita",
+            nombre: id("npNombre").value.trim(),           apellidos: id("npApellidos").value.trim(),
+            ci: id("npCI").value.trim(),                   grupo_sanguineo: id("npGrupoSanguineo").value.trim(),
+            telefono: id("npTelefono").value.trim(),       fecha_nacimiento: val("npFechaNacimiento"),
+            direccion: id("npDireccion").value.trim()
+        }).then(function(data) {
+            btn.disabled = false; btn.innerHTML = '<i class="fa fa-save"></i> Guardar paciente';
+            if (data.error) { swal({ icon:"error", title: data.error }); return; }
+            id("formNuevoPacienteInline").style.display = "none"; limpiarFormPaciente();
+            id("infoPaciente").style.display = "block";
+            txt("pacNombre", data.nombre+" "+data.apellidos); txt("pacCI", data.ci);
+            txt("pacFechaNac", formatearFecha(data.fecha_nacimiento)); txt("pacTelefono", data.telefono);
+            txt("pacDireccion", data.direccion); txt("pacGrupoSanguineo", data.grupo_sanguineo);
+            val("nuevaCitaIdPaciente", data.id_paciente); id("btnGuardarCita").disabled = false;
+            swal({ icon:"success", title:"Paciente registrado correctamente" });
+        }).catch(function() {
+            btn.disabled = false; btn.innerHTML = '<i class="fa fa-save"></i> Guardar paciente';
+            swal({ icon:"error", title:"Error al registrar el paciente" });
         });
     });
+
+    // ── Confirmar reprogramación ──────────────────────────────────────────────
+    id("btnConfirmarReprogramar").addEventListener("click", function() {
+        var btn = this, fecha = val("repFecha"), hora = val("repHora"), idM = val("repIdMedico"), idT = val("repIdTipoCita");
+        if (!fecha || !hora || !idM || !idT) { swal({ icon:"warning", title:"Completa todos los campos" }); return; }
+        btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Reprogramando...';
+        postJson("/Marie_stopes_pruebas/index.php", {
+            action:"reprogramarCita", id_cita_original: val("repIdCitaOriginal"),
+            repFecha: fecha, repHora: hora, repIdMedico: idM, repIdTipoCita: idT
+        }).then(function(data) {
+            btn.disabled = false; btn.innerHTML = '<i class="fa fa-calendar-check-o"></i> Confirmar reprogramación';
+            if (data.ok) {
+                $("#modalReprogramarCita").modal("hide");
+                swal({ icon:"success", title:"¡Cita reprogramada correctamente!" })
+                    .then(function() { if (window.refrescarCalendario) window.refrescarCalendario(); });
+            } else { swal({ icon:"error", title: data.error || "Error al reprogramar" }); }
+        }).catch(function() {
+            btn.disabled = false; btn.innerHTML = '<i class="fa fa-calendar-check-o"></i> Confirmar reprogramación';
+            swal({ icon:"error", title:"Error de conexión" });
+        });
+    });
+
+    // ── Funciones compartidas ─────────────────────────────────────────────────
+    function cargarMedicos(pref) {
+        var isRep    = pref === "rep";
+        var fecha    = val(isRep ? "repFecha"        : "nuevaCitaFecha");
+        var selTipo  = id(isRep ? "repIdTipoCita"    : "nuevaCitaIdTipoCita");
+        var selMed   = id(isRep ? "repIdMedico"      : "nuevaCitaIdMedico");
+        var labelId  = isRep ? "repLabelMedico"      : "labelMedicoInfo";
+        var horaId   = isRep ? "repHora"             : "nuevaCitaHora";
+
+        if (!fecha || !selTipo.value) {
+            selMed.innerHTML = '<option value="">Seleccione un médico</option>'; selMed.disabled = true;
+            txt(labelId, "Seleccione " + (isRep ? "fecha y tipo" : "tipo y fecha") + " primero");
+            val(horaId, ""); return;
+        }
+        if (isRep) repTiempo = parseInt(selTipo.options[selTipo.selectedIndex].getAttribute("data-tiempo")) || 0;
+        else       tiempoCita = parseInt(selTipo.options[selTipo.selectedIndex].getAttribute("data-tiempo")) || 0;
+
+        fetchJson("/Marie_stopes_pruebas/index.php?action=getMedicos&fecha="+encodeURIComponent(fecha)+"&id_tipo_cita="+encodeURIComponent(selTipo.value))
+            .then(function(medicos) { construirOpcionesMedicos(selMed, medicos, labelId); val(horaId, ""); });
+    }
+
+    function actualizarHora(pref) {
+        var isRep   = pref === "rep";
+        var fecha   = val(isRep ? "repFecha"    : "nuevaCitaFecha");
+        var selMed  = id(isRep ? "repIdMedico"  : "nuevaCitaIdMedico");
+        var hiId    = isRep ? "repHora"         : "nuevaCitaHora";
+        var labelId = isRep ? "repLabelMedico"  : "labelMedicoInfo";
+        var storeKey= isRep ? "repHorasOcupadas": "horasOcupadasMedico";
+        val(hiId, ""); if (!selMed.value || !fecha) return;
+        var opt = selMed.options[selMed.selectedIndex];
+        id(hiId).min = opt.getAttribute("data-turno-inicio");
+        id(hiId).max = opt.getAttribute("data-turno-fin");
+        cargarHorasOcupadas(selMed.value, fecha, labelId, storeKey, isRep ? repIdCita : null);
+    }
 
     function buscarPaciente() {
-        var carnet = document.getElementById("buscarCarnet").value.trim();
-        if (carnet === "") {
-            Swal.fire({ icon: "warning", title: "Ingresa el número de carnet", confirmButtonText: "Cerrar" });
-            return;
-        }
-
-        fetch("index.php?action=buscarPacienteCarnet&carnet=" + encodeURIComponent(carnet))
-            .then(function (res) { return res.json(); })
-            .then(function (data) {
-                if (data.error) {
-                    document.getElementById("infoPaciente").style.display  = "none";
-                    document.getElementById("errorPaciente").style.display = "block";
-                    document.getElementById("nuevaCitaIdPaciente").value   = "";
-                    document.getElementById("btnGuardarCita").disabled     = true;
-                } else {
-                    document.getElementById("errorPaciente").style.display    = "none";
-                    document.getElementById("infoPaciente").style.display     = "block";
-                    document.getElementById("pacNombre").textContent          = data.nombre + " " + data.apellidos;
-                    document.getElementById("pacCI").textContent              = data.ci;
-                    document.getElementById("pacFechaNac").textContent        = formatearFecha(data.fecha_nacimiento);
-                    document.getElementById("pacTelefono").textContent        = data.telefono;
-                    document.getElementById("pacDireccion").textContent       = data.direccion;
-                    document.getElementById("pacGrupoSanguineo").textContent  = data.grupo_sanguineo;
-                    document.getElementById("nuevaCitaIdPaciente").value      = data.id_paciente;
-                    document.getElementById("btnGuardarCita").disabled        = false;
-                }
-            })
-            .catch(function () {
-                Swal.fire({ icon: "error", title: "Error al buscar el paciente", confirmButtonText: "Cerrar" });
-            });
+        var carnet = id("buscarCarnet").value.trim();
+        if (!carnet) { swal({ icon:"warning", title:"Ingresa el número de carnet" }); return; }
+        fetchJson("/Marie_stopes_pruebas/index.php?action=buscarPacienteCarnet&carnet="+encodeURIComponent(carnet))
+        .then(function(data) {
+            if (data.error) {
+                id("infoPaciente").style.display = "none"; id("errorPaciente").style.display = "block";
+                val("nuevaCitaIdPaciente",""); id("btnGuardarCita").disabled = true;
+            } else {
+                id("errorPaciente").style.display = "none"; id("infoPaciente").style.display = "block";
+                txt("pacNombre", data.nombre+" "+data.apellidos); txt("pacCI", data.ci);
+                txt("pacFechaNac", formatearFecha(data.fecha_nacimiento)); txt("pacTelefono", data.telefono);
+                txt("pacDireccion", data.direccion); txt("pacGrupoSanguineo", data.grupo_sanguineo);
+                val("nuevaCitaIdPaciente", data.id_paciente); id("btnGuardarCita").disabled = false;
+            }
+        }).catch(function() { swal({ icon:"error", title:"Error al buscar el paciente" }); });
     }
 
-    // Convierte "1990-04-15" a "15/04/1990"
-    function formatearFecha(fecha) {
-        if (!fecha) return "";
-        var partes = fecha.split("-");
-        return partes[2] + "/" + partes[1] + "/" + partes[0];
+    function limpiarFormPaciente() {
+        ["npNombre","npApellidos","npCI","npGrupoSanguineo","npTelefono","npFechaNacimiento","npDireccion"]
+            .forEach(function(s) { id(s).value = ""; });
     }
 
-    function limpiarFormularioNuevoPaciente() {
-        document.getElementById("npNombre").value          = "";
-        document.getElementById("npApellidos").value       = "";
-        document.getElementById("npCI").value              = "";
-        document.getElementById("npGrupoSanguineo").value  = "";
-        document.getElementById("npTelefono").value        = "";
-        document.getElementById("npFechaNacimiento").value = "";
-        document.getElementById("npDireccion").value       = "";
+    function limpiarModalReprogramar() {
+        val("repFecha",""); val("repHora",""); val("repIdTipoCita","");
+        id("repIdMedico").innerHTML = '<option value="">Seleccione un médico</option>'; id("repIdMedico").disabled = true;
+        txt("repLabelMedico","Seleccione fecha y tipo primero");
+        window.repHorasOcupadas = []; repTiempo = 0;
     }
 
     function limpiarModal() {
-        document.getElementById("buscarCarnet").value             = "";
-        document.getElementById("nuevaCitaIdPaciente").value      = "";
-        document.getElementById("nuevaCitaFecha").value           = "";
-        document.getElementById("nuevaCitaHora").value            = "";
-        document.getElementById("nuevaCitaIdTipoCita").value      = "";
-        document.getElementById("nuevaCitaIdMedico").innerHTML    = '<option value="">Seleccione un médico</option>';
-        document.getElementById("nuevaCitaIdMedico").disabled     = true;
-        document.getElementById("labelMedicoInfo").textContent    = "Seleccione tipo y fecha primero";
-        document.getElementById("pacNombre").textContent          = "";
-        document.getElementById("pacCI").textContent              = "";
-        document.getElementById("pacFechaNac").textContent        = "";
-        document.getElementById("pacTelefono").textContent        = "";
-        document.getElementById("pacDireccion").textContent       = "";
-        document.getElementById("pacGrupoSanguineo").textContent  = "";
-        document.getElementById("infoPaciente").style.display            = "none";
-        document.getElementById("errorPaciente").style.display           = "none";
-        document.getElementById("formNuevoPacienteInline").style.display = "none";
-        document.getElementById("btnGuardarCita").disabled               = true;
-        limpiarFormularioNuevoPaciente();
-        window.horasOcupadasMedico = [];
-        tiempoCitaSeleccionado     = 0;
+        ["buscarCarnet","nuevaCitaIdPaciente","nuevaCitaFecha","nuevaCitaHora","nuevaCitaIdTipoCita"]
+            .forEach(function(s) { val(s,""); });
+        id("nuevaCitaIdMedico").innerHTML = '<option value="">Seleccione un médico</option>'; id("nuevaCitaIdMedico").disabled = true;
+        txt("labelMedicoInfo","Seleccione tipo y fecha primero");
+        ["pacNombre","pacCI","pacFechaNac","pacTelefono","pacDireccion","pacGrupoSanguineo"].forEach(function(s) { txt(s,""); });
+        id("infoPaciente").style.display = id("errorPaciente").style.display = id("formNuevoPacienteInline").style.display = "none";
+        id("btnGuardarCita").disabled = true;
+        limpiarFormPaciente(); window.horasOcupadasMedico = []; tiempoCita = 0;
     }
 
 });

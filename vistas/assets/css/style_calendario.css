@@ -1,0 +1,25 @@
+
+.calendario-estados {
+    display:inline-block; 
+    width:14px; 
+    height:14px; 
+    border-radius:3px; 
+    margin-right:4px
+  }
+.calendario-estados.pendiente  { background-color: #3788d8; }
+.calendario-estados.atendida   { background-color: #28a745; }
+
+/* ── FullCalendar – neutralizar colores del tema ─────────────────────────── */
+#calendarioCitas { background: #fff; }
+#calendarioCitas .fc-scrollgrid,
+#calendarioCitas .fc-scrollgrid td,
+#calendarioCitas .fc-scrollgrid th      { border-color: #dee2e6; }
+#calendarioCitas .fc-col-header-cell    { background: #f8f9fa; color: #333; }
+#calendarioCitas .fc-timegrid-slot      { background: #fff; }
+#calendarioCitas .fc-day-today          { background: #fff8e1 !important; }
+#calendarioCitas .fc-timegrid-now-indicator-line { border-color: #dc3545; }
+#calendarioCitas .fc-toolbar-title      { color: #333; }
+#calendarioCitas .fc-button             { background-color: #6c757d; border-color: #6c757d; color: #fff; }
+#calendarioCitas .fc-button:hover       { background-color: #5a6268; border-color: #545b62; }
+#calendarioCitas .fc-button-active,
+#calendarioCitas .fc-button-primary:not(:disabled).fc-button-active { background-color: #343a40; border-color: #343a40; }
