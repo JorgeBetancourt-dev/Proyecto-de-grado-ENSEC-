@@ -102,5 +102,14 @@ class ModeloUsuarios {
 
         return $stmt->execute() ? "ok" : "error";
     }
+    static public function mdlBloquearUsuario($id_usuario, $bloqueado) {
+        $stmt = Conexion::conectar()->prepare(
+            "UPDATE usuarios SET bloqueado = :bloqueado WHERE id_usuario = :id AND activo = 1"
+        );
+        $stmt->bindParam(":bloqueado", $bloqueado, PDO::PARAM_INT);
+        $stmt->bindParam(":id",        $id_usuario, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->rowCount() > 0 ? "ok" : "error";
+    }
 }
 ?>

@@ -6,7 +6,6 @@
       </div>
       <div class="modal-body">
 
-        <!-- Badge de estado -->
         <div class="text-center mb-3">
           <span id="detEstadoBadge" class="label" style="font-size:14px; padding:6px 16px; border-radius:20px;"></span>
         </div>
@@ -40,10 +39,6 @@
             <tr>
               <th><i class="fa fa-user-md"></i> Médico</th>
               <td id="detMedico"></td>
-            </tr>
-            <tr>
-              <th><i class="fa fa-user-circle"></i> Registrado por</th>
-              <td id="detRecepcionista"></td>
             </tr>
           </tbody>
         </table>

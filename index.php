@@ -37,6 +37,7 @@ require_once "modelos/tipo_cita.modelo.php";
 ControladorUsuarios::ctrEliminarUsuarios();
 ControladorUsuarios::ctrEditarUsuarios();
 ControladorUsuarios::crtCrearUsuarios();
+ControladorUsuarios::ctrBloquearUsuario();
 
 ControladorRoles::crtCrearRol();
 ControladorRoles::ctrEditarRol();
@@ -85,7 +86,7 @@ ControladorTipoCita::ctrEditarTipoCita();
 ControladorTipoCita::ctrEliminarTipoCita();
 
 
-//AJAX para FullCalendar — va junto al bloque de getPermisosPorRol
+//AJAX para FullCalendar
 if (isset($_GET["action"]) && $_GET["action"] == "getCitas") {
     session_start();
     if (!isset($_SESSION["IdUsuario"])) {

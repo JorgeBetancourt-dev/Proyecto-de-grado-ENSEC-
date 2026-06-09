@@ -13,6 +13,8 @@ class ControladorUsuarios {
                 $respuesta = ModeloUsuarios::mdlMostrarUsuarios($tabla, $item, $valor);
 
                 if ($respuesta &&
+                    $respuesta["activo"] == 1 &&
+                    $respuesta["bloqueado"] == 0 &&
                     $respuesta["usuario"] == $_POST["ingUsuario"] &&
                     password_verify($_POST["ingPassword"], $respuesta["contraseña"])) {
 
@@ -146,6 +148,34 @@ class ControladorUsuarios {
                 if (session_status() == PHP_SESSION_NONE) session_start();
                 $_SESSION["cambiar_password"] = $respuesta;
             }
+        }
+    }
+    static public function ctrBloquearUsuario() {
+        if (isset($_POST["action"]) && $_POST["action"] == "bloquearUsuario") {
+            header("Content-Type: application/json");
+            $id_usuario = $_POST["id_usuario"] ?? null;
+            $bloqueado  = $_POST["bloqueado"]  ?? null;
+
+            if (!is_numeric($id_usuario) || !in_array($bloqueado, ["0", "1"])) {
+                echo json_encode(["error" => "Datos inválidos"]); exit;
+            }
+
+            // Evitar que el usuario se bloquee a sí mismo
+            if (session_status() == PHP_SESSION_NONE) session_start();
+            if ((int)$id_usuario === (int)$_SESSION["IdUsuario"]) {
+                echo json_encode(["error" => "No puedes bloquearte a ti mismo"]); exit;
+            }
+
+            $nuevoBloqueado = $bloqueado == "1" ? 0 : 1;
+            $respuesta = ModeloUsuarios::mdlBloquearUsuario((int)$id_usuario, $nuevoBloqueado);
+
+            if ($respuesta === "ok") {
+                $mensaje = $nuevoBloqueado ? "Usuario bloqueado correctamente" : "Usuario desbloqueado correctamente";
+                echo json_encode(["ok" => true, "mensaje" => $mensaje]);
+            } else {
+                echo json_encode(["error" => "No se pudo actualizar el estado del usuario"]);
+            }
+            exit;
         }
     }
 }

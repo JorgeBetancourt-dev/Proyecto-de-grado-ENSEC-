@@ -23,6 +23,7 @@ include "vistas/assets/eventos/usuarios.eventos.php";
             <th>Usuario</th>
             <th>Rol</th>
             <th>Horario</th>
+            <th>Estado</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -40,6 +41,13 @@ include "vistas/assets/eventos/usuarios.eventos.php";
             <td><?= htmlspecialchars($value["nombre_rol"] ?? "Sin rol") ?></td>
             <td><?= htmlspecialchars($value["nombre_horario"] ?? "Sin horario") ?></td>
             <td>
+              <?php if ($value["bloqueado"] == 1): ?>
+                <span class="label label-danger">Bloqueado</span>
+              <?php else: ?>
+                <span class="label label-success">Activo</span>
+              <?php endif; ?>
+            </td>
+            <td>
               <button class="btn btn-warning btnEditarUsuario"
                 data-id="<?= $id ?>"
                 data-nombre="<?= htmlspecialchars($value["nombre"]) ?>"
@@ -54,6 +62,19 @@ include "vistas/assets/eventos/usuarios.eventos.php";
               <button class="btn btn-danger btnEliminarUsuario" data-id="<?= $id ?>">
                 Eliminar
               </button>
+              <?php if ($value["bloqueado"] == 1): ?>
+              <button class="btn btn-success btnBloquearUsuario"
+                data-id="<?= $id ?>"
+                data-bloqueado="1">
+                <i class="fa fa-unlock"></i> Desbloquear
+              </button>
+              <?php else: ?>
+              <button class="btn btn-secondary btnBloquearUsuario"
+                data-id="<?= $id ?>"
+                data-bloqueado="0">
+                <i class="fa fa-lock"></i> Bloquear
+              </button>
+              <?php endif; ?>
               <form id="formEliminar-<?= $id ?>" method="POST" style="display:none;">
                 <input type="hidden" name="eliminarUsuario" value="<?= $id ?>">
               </form>

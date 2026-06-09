@@ -80,7 +80,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ── FullCalendar ──────────────────────────────────────────────────────────
     var calendar = new FullCalendar.Calendar(id("calendarioCitas"), {
-        locale: "es", initialView: "timeGridWeek", height: "auto", nowIndicator: true,
+        locale: "es", initialView: "timeGridWeek",slotMinTime: "07:00:00",
+        slotMaxTime: "21:00:00",hiddenDays: [0], height: "auto", nowIndicator: true,
         headerToolbar: { left:"prev,next today", center:"title", right:"dayGridMonth,timeGridWeek,timeGridDay" },
         buttonText: { today:"Hoy", month:"Mes", week:"Semana", day:"Día" },
         events: function(info, ok, fail) {
@@ -95,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
             // Poblar modal detalle
             txt("detPaciente", e.title);  txt("detCI", ep.pac_ci);    txt("detTelefono", ep.pac_telefono);
             txt("detFecha", formatearFecha(fecha)); txt("detHora", hora);
-            txt("detMedico", ep.medico);  txt("detTipoCita", ep.tipo_cita); txt("detRecepcionista", ep.recepcionista);
+            txt("detMedico", ep.medico);  txt("detTipoCita", ep.tipo_cita);
             val("detIdCita", e.id);
 
             // Poblar modal reprogramar

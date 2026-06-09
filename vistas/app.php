@@ -8,7 +8,7 @@ session_start();
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>Prototipo</title>
-  <?php include "vistas/referencias/referencias.php"; ?>
+  <?php include "vistas/referencias/referencias_css.php"; ?>
 </head>
 <body>
     <?php 
@@ -72,5 +72,7 @@ session_start();
         include "modulos/acceso_usuario/login.php";
     }
     ?>
+
+     <?php include "vistas/referencias/referencias_js.php"; ?>
 </body>
 </html>
