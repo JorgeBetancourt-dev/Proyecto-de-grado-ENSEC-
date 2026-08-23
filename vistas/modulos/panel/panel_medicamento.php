@@ -19,6 +19,7 @@ include "vistas/assets/eventos/medicamentos.eventos.php";
           <tr>
             <th>#</th>
             <th>Nombre</th>
+            <th>Precio</th>
             <th>Descripción</th>
             <th>Acciones</th>
           </tr>
@@ -32,11 +33,13 @@ include "vistas/assets/eventos/medicamentos.eventos.php";
           <tr>
             <td><?= $id ?></td>
             <td><?= htmlspecialchars($value["nombre"]) ?></td>
+            <td>$<?= number_format($value["precio"], 2) ?></td>
             <td><?= htmlspecialchars($value["descripcion"] ?? "") ?></td>
             <td>
               <button class="btn btn-warning btnEditarMedicamento"
                 data-id="<?= $id ?>"
                 data-nombre="<?= htmlspecialchars($value["nombre"]) ?>"
+                data-precio="<?= $value["precio"] ?>"
                 data-descripcion="<?= htmlspecialchars($value["descripcion"] ?? "") ?>"
                 data-toggle="modal"
                 data-target="#modalEditarMedicamento">

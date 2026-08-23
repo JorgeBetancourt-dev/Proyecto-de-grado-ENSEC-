@@ -8,24 +8,24 @@ class ControladorClientes {
     }
 
     static public function crtCrearCliente() {
-    if (isset($_POST["nuevoNombreCliente"], $_POST["nuevoApellidosCliente"])) {
-        if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoNombreCliente"]) &&
-            preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoApellidosCliente"])) {
+        if (isset($_POST["nuevoNombreCliente"], $_POST["nuevoApellidosCliente"])) {
+            if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoNombreCliente"]) &&
+                preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoApellidosCliente"])) {
 
-            $tabla = "clientes";
-            $datos = array(
-                "nombre"    => trim($_POST["nuevoNombreCliente"]),
-                "apellidos" => trim($_POST["nuevoApellidosCliente"]),
-                "nit"       => trim($_POST["nuevoNitCliente"] ?? "")
-            );
+                $tabla = "clientes";
+                $datos = array(
+                    "nombre"    => trim($_POST["nuevoNombreCliente"]),
+                    "apellidos" => trim($_POST["nuevoApellidosCliente"]),
+                    "nit"       => trim($_POST["nuevoNitCliente"] ?? "")
+                );
 
-            $respuesta = ModeloClientes::mdlCrearCliente($tabla, $datos);
+                $respuesta = ModeloClientes::mdlCrearCliente($tabla, $datos);
 
-            if (session_status() == PHP_SESSION_NONE) session_start();
-            $_SESSION["crear_cliente"] = ($respuesta == "ok") ? "ok" : "error";
+                if (session_status() == PHP_SESSION_NONE) session_start();
+                $_SESSION["crear_cliente"] = ($respuesta == "ok") ? "ok" : "error";
 
-            header("Location: " . $_SERVER["HTTP_REFERER"]);
-            exit;
+                header("Location: " . $_SERVER["HTTP_REFERER"]);
+                exit;
             }
         }
     }
@@ -68,6 +68,21 @@ class ControladorClientes {
                 header("Location: " . $_SERVER["HTTP_REFERER"]);
                 exit;
             }
+        }
+    }
+
+    // ── Buscador del panel de pagos (coincidencia exacta por NIT) ───────────
+
+    static public function ctrBuscarClientePorNit() {
+        if (isset($_GET["buscarClientePorNit"])) {
+            $nit = trim($_GET["buscarClientePorNit"]);
+            if ($nit === "") {
+                echo json_encode(["encontrado" => false]);
+                exit;
+            }
+            $cliente = ModeloClientes::mdlBuscarClientePorNit($nit);
+            echo json_encode(["encontrado" => (bool) $cliente, "cliente" => $cliente ?: null]);
+            exit;
         }
     }
 }

@@ -33,6 +33,12 @@ require_once "modelos/horarios.modelo.php";
 // Tipo de cita
 require_once "controladores/tipo_cita.controlador.php";
 require_once "modelos/tipo_cita.modelo.php";
+// Consultas
+require_once "controladores/consultas.controlador.php";
+require_once "modelos/consultas.modelo.php";
+// Pagos
+require_once "controladores/pagos.controlador.php";
+require_once "modelos/pagos.modelo.php";
 
 ControladorUsuarios::ctrEliminarUsuarios();
 ControladorUsuarios::ctrEditarUsuarios();
@@ -50,6 +56,7 @@ ControladorPermisos::ctrEliminarPermiso();
 ControladorPacientes::crtCrearPacientes();
 ControladorPacientes::ctrEditarPacientes();
 ControladorPacientes::ctrEliminarPacientes();
+ControladorPacientes::ctrBuscarPacientePorCI();       // AJAX: buscar paciente por CI exacto (panel de pagos)
 
 ControladorTipoServicio::crtCrearTipoServicio();
 ControladorTipoServicio::ctrEditarTipoServicio();
@@ -66,16 +73,18 @@ ControladorMedicamentos::ctrEliminarMedicamento();
 ControladorClientes::crtCrearCliente();
 ControladorClientes::ctrEditarCliente();
 ControladorClientes::ctrEliminarCliente();
+ControladorClientes::ctrBuscarClientePorNit();        // AJAX: buscar cliente por NIT exacto (panel de pagos)
 
+ControladorCitas::ctrMostrarMedicosActivos();          // AJAX: médicos activos para el panel
 ControladorCitas::ctrReprogramarCita();                // AJAX POST: reprogramar cita
 ControladorCitas::ctrCrearPacienteDesdeCita();         // AJAX POST: registrar paciente inline
 ControladorCitas::ctrBuscarPacientePorCarnet();        // AJAX: buscar paciente por carnet
-ControladorCitas::ctrMostrarMedicos();                 // AJAX: obtener médicos filtrados por horario
+ControladorCitas::ctrMostrarMedicos();                 // AJAX: médicos con horario activo en una fecha
+ControladorCitas::ctrMostrarCitasCalendario();         // AJAX: eventos del calendario de un médico
 ControladorCitas::ctrHorasOcupadas();                  // AJAX: horas ocupadas de un médico
 ControladorCitas::ctrObtenerCita();                    // AJAX: datos de una cita
 ControladorCitas::ctrCancelarCita();                   // AJAX POST: cancelar cita
 ControladorCitas::crtCrearCita();                      // POST: registrar nueva cita
- 
 
 ControladorHorarios::crtCrearHorario();
 ControladorHorarios::ctrEditarHorario();
@@ -85,41 +94,33 @@ ControladorTipoCita::crtCrearTipoCita();
 ControladorTipoCita::ctrEditarTipoCita();
 ControladorTipoCita::ctrEliminarTipoCita();
 
+ControladorConsultas::ctrGuardarTriaje();               // POST: guardar triaje
+ControladorConsultas::ctrGuardarConsulta();              // POST: finalizar consulta
+ControladorConsultas::ctrAgregarExamen();                 // POST: solicitar examen
+ControladorConsultas::ctrQuitarExamen();                  // POST: quitar examen
+ControladorConsultas::ctrAgregarTratamiento();             // POST: agregar tratamiento
+ControladorConsultas::ctrQuitarTratamiento();              // POST: quitar tratamiento
+ControladorConsultas::ctrAgregarMedicamentoTratamiento();  // POST: agregar medicamento a tratamiento
+ControladorConsultas::ctrQuitarMedicamentoTratamiento();   // POST: quitar medicamento de tratamiento
 
-//AJAX para FullCalendar
-if (isset($_GET["action"]) && $_GET["action"] == "getCitas") {
-    session_start();
-    if (!isset($_SESSION["IdUsuario"])) {
-        echo json_encode(["error" => "No autorizado"]);
-        exit;
-    }
-    header("Content-Type: application/json");
-    $citas   = ModeloCitas::mdlMostrarCitasCalendario();
-    $eventos = [];
-    foreach ($citas as $c) {
-        $colores = ["pendiente" => "#3788d8", "atendida" => "#28a745", "cancelada" => "#dc3545"];
-        $color   = $colores[$c["estado"]] ?? "#3788d8";
-        $eventos[] = [
-            "id"              => $c["id_cita"],
-            "title"           => $c["pac_nombre"] . " " . $c["pac_apellidos"],
-            "start"           => $c["fecha"] . "T" . $c["hora"],
-            "backgroundColor" => $color,
-            "borderColor"     => $color,
-            "extendedProps"   => [
-                "estado"                 => $c["estado"],
-                "pac_ci"                 => $c["pac_ci"],
-                "pac_telefono"           => $c["pac_telefono"],
-                "medico"                 => $c["medico"] ?? "Sin asignar",
-                "recepcionista"          => $c["recepcionista_registra"],
-                        "tipo_cita"              => $c["tipo_cita"] ?? "Sin especificar"
-            ]
-        ];
-    }
-    echo json_encode($eventos);
-    exit;
-}
+ControladorPagos::ctrAgregarLinea();                      // POST: agregar ítem al cobro
+ControladorPagos::ctrQuitarLinea();                       // POST: quitar ítem del cobro
+ControladorPagos::ctrAsignarPaciente();                   // AJAX POST: asignar paciente (flujo sin cita)
+ControladorPagos::ctrAsignarCliente();                    // AJAX POST: asignar cliente (flujo sin cita)
+ControladorPagos::ctrRegistrarPacienteRapido();           // AJAX POST: registro rápido de paciente + asignar
+ControladorPagos::ctrRegistrarClienteRapido();            // AJAX POST: registro rápido de cliente + asignar
+ControladorPagos::ctrFinalizarPago();                     // POST: confirmar cobro
 
+ControladorPagos::ctrCarritoObtener();                  // AJAX: leer estado del carrito
+ControladorPagos::ctrCarritoAsignarPaciente();           // AJAX POST: fijar paciente ya existente
+ControladorPagos::ctrCarritoRegistrarPacienteRapido();   // AJAX POST: crear paciente + fijarlo
+ControladorPagos::ctrCarritoAsignarCliente();            // AJAX POST: fijar cliente ya existente
+ControladorPagos::ctrCarritoRegistrarClienteRapido();    // AJAX POST: crear cliente + fijarlo
+ControladorPagos::ctrCarritoAgregarLinea();              // AJAX POST: agregar ítem al carrito
+ControladorPagos::ctrCarritoQuitarLinea();                // AJAX POST: quitar ítem del carrito
+ControladorPagos::ctrCarritoCancelar();                   // AJAX POST: vaciar carrito
 
+ControladorPagos::ctrCarritoFinalizarPago();             // AJAX POST: confirmar y grabar el cobro completo
 
 if (isset($_GET["action"]) && $_GET["action"] == "getPermisosPorRol") {
     $permisos = ControladorRoles::ctrMostrarPermisosPorRol((int)$_GET["id_rol"]);

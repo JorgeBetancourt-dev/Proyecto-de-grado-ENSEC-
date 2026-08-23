@@ -27,7 +27,7 @@ include "vistas/assets/eventos/tipo_servicio.eventos.php";
           <?php
             $tipos = ControladorTipoServicio::ctrMostrarTipoServicio(null, null);
             foreach ($tipos as $value):
-              $id = $value["id_tipo_servicio"];
+              $id = $value["id_servicio"];
           ?>
           <tr>
             <td><?= $id ?></td>

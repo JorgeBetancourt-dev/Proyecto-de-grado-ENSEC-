@@ -8,12 +8,15 @@ class ControladorExamenes {
     }
 
     static public function crtCrearExamen() {
-        if (isset($_POST["nuevoNombreExamen"])) {
-            if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoNombreExamen"])) {
+        if (isset($_POST["nuevoNombreExamen"], $_POST["nuevoPrecioExamen"])) {
+            if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoNombreExamen"]) &&
+                is_numeric($_POST["nuevoPrecioExamen"]) &&
+                $_POST["nuevoPrecioExamen"] >= 0) {
 
                 $tabla = "examenes";
                 $datos = array(
-                    "nombre" => trim($_POST["nuevoNombreExamen"])
+                    "nombre" => trim($_POST["nuevoNombreExamen"]),
+                    "precio" => $_POST["nuevoPrecioExamen"]
                 );
 
                 $respuesta = ModeloExamenes::mdlCrearExamen($tabla, $datos);
@@ -28,14 +31,17 @@ class ControladorExamenes {
     }
 
     static public function ctrEditarExamen() {
-        if (isset($_POST["editarIdExamen"], $_POST["editarNombreExamen"])) {
+        if (isset($_POST["editarIdExamen"], $_POST["editarNombreExamen"], $_POST["editarPrecioExamen"])) {
             if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["editarNombreExamen"]) &&
-                is_numeric($_POST["editarIdExamen"])) {
+                is_numeric($_POST["editarIdExamen"]) &&
+                is_numeric($_POST["editarPrecioExamen"]) &&
+                $_POST["editarPrecioExamen"] >= 0) {
 
                 $tabla = "examenes";
                 $datos = array(
                     "id"     => $_POST["editarIdExamen"],
-                    "nombre" => trim($_POST["editarNombreExamen"])
+                    "nombre" => trim($_POST["editarNombreExamen"]),
+                    "precio" => $_POST["editarPrecioExamen"]
                 );
 
                 $respuesta = ModeloExamenes::mdlEditarExamen($tabla, $datos);

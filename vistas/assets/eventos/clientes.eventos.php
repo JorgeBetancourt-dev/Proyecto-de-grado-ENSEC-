@@ -39,12 +39,10 @@ document.addEventListener("click", function(e) {
     if (e.target.classList.contains("btnEditarCliente")) {
         let id        = e.target.getAttribute("data-id");
         let nombre    = e.target.getAttribute("data-nombre");
-        let apellidos = e.target.getAttribute("data-apellidos");
         let nit       = e.target.getAttribute("data-nit");
 
         document.getElementById("editarIdCliente").value       = id;
         document.getElementById("editarNombreCliente").value   = nombre;
-        document.getElementById("editarApellidosCliente").value = apellidos;
         document.getElementById("editarNitCliente").value      = nit;
     }
 });

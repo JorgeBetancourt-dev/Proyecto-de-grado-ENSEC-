@@ -5,12 +5,55 @@ $permisosRol = $id_rol
     ? ControladorRoles::ctrMostrarPermisosPorRol($id_rol)
     : [];
 
-$nombresUnicos = array_unique(
-    array_map(
-        fn($p) => $p["nombre"],
-        array_filter($permisosRol, fn($p) => $p["activo"] == 1)
-    )
-);
+$permisosActivos = array_filter($permisosRol, fn($p) => $p["activo"] == 1);
+
+$configMenu = [
+    "usuario" => [
+        "icono" => "fa fa-users",
+        "items" => [
+            "panel_usuario" => "Usuarios",
+            "panel_acceso"  => "Accesos",
+            "panel_horario" => "Horarios",
+            "panel_tipo_cita" => "Tipos de cita",
+        ],
+    ],
+    "cita" => [
+        "icono" => "fa fa-calendar",
+        "items" => [
+            "panel_cita" => "Citas",
+        ],
+    ],
+    "consulta" => [
+        "icono" => "fa fa-stethoscope",
+        "items" => [
+            "panel_consulta" => "Consultas",
+            "panel_atencion" => "Atención",
+        ],
+    ],
+    "pago" => [
+        "icono" => "fa fa-money",
+        "items" => [
+            "panel_pago" => "Pagos",
+        ],
+    ],
+    "servicio_medico" => [
+        "icono" => "fa fa-medkit",
+        "items" => [
+            "panel_servicio"    => "Servicios",
+            "panel_examen"      => "Exámenes",
+            "panel_medicamento" => "Medicamentos",
+        ],
+    ],
+    "contacto" => [
+        "icono" => "fa fa-address-book",
+        "items" => [
+            "panel_paciente" => "Pacientes",
+            "panel_cliente"  => "Clientes",
+        ],
+    ],
+];
+
+$modulosActivos = array_column($permisosActivos, 'modulo');
 ?>
 
 <nav class="sidebar sidebar-offcanvas" id="sidebar">
@@ -23,64 +66,49 @@ $nombresUnicos = array_unique(
       </a>
     </li>
 
-    <?php foreach ($nombresUnicos as $nombre): ?>
+    <?php foreach ($configMenu as $grupo => $datosGrupo): ?>
       <?php
-
-        switch ($nombre) {
-            case "usuario":
-                $icono    = "fa fa-users";
-                $etiqueta = "Usuarios";
-                $ruta     = "panel_usuario";
-                break;
-            case "paciente":
-                $icono    = "fa fa-user-plus";
-                $etiqueta = "Pacientes";
-                $ruta     = "panel_paciente";
-                break;
-            case "tipo_servicio":
-                $icono    = "fa fa-list-alt";
-                $etiqueta = "Servicios";
-                $ruta     = "panel_tipo_servicio";
-                break;
-            case "examen":
-                $icono    = "fa fa-flask";
-                $etiqueta = "Exámenes";
-                $ruta     = "panel_examen";
-                break;
-            case "medicamento":
-                $icono    = "fa fa-medkit";
-                $etiqueta = "Medicamentos";
-                $ruta     = "panel_medicamento";
-                break;
-            case "cliente":
-                $icono    = "fa fa-building";
-                $etiqueta = "Clientes";
-                $ruta     = "panel_cliente";
-                break;
-            case "cita":
-                $icono    = "fa fa-calendar";
-                $etiqueta = "Citas";
-                $ruta     = "panel_cita";
-                break;
-            case "horario":
-                $icono    = "fa fa-clock-o";
-                $etiqueta = "Horarios";
-                $ruta     = "panel_horario";
-                break;
-            case "tipo_cita":
-                $icono    = "fa fa-tag";
-                $etiqueta = "Tipos de cita";
-                $ruta     = "panel_tipo_cita";
-                break;
-        }
+        $itemsActivos = array_intersect_key(
+            $datosGrupo["items"],
+            array_flip($modulosActivos)
+        );
+        if (empty($itemsActivos)) continue;
       ?>
-      <li class="nav-item">
-        <a class="nav-link" href="/Marie_stopes_pruebas/<?= $ruta ?>">
-          <i class="<?= $icono ?> menu-icon"></i>
-          <span class="menu-title"><?= $etiqueta ?></span>
-        </a>
-      </li>
-      
+
+      <?php if (count($itemsActivos) === 1): ?>
+        <?php
+          $modulo   = array_key_first($itemsActivos);
+          $etiqueta = $itemsActivos[$modulo];
+        ?>
+        <li class="nav-item">
+          <a class="nav-link" href="/Marie_stopes_pruebas/<?= $modulo ?>">
+            <i class="<?= $datosGrupo['icono'] ?> menu-icon"></i>
+            <span class="menu-title"><?= $etiqueta ?></span>
+          </a>
+        </li>
+
+      <?php else: ?>
+        <li class="nav-item">
+          <a class="nav-link" data-toggle="collapse" href="#submenu-<?= $grupo ?>"
+             aria-expanded="false" aria-controls="submenu-<?= $grupo ?>">
+            <i class="<?= $datosGrupo['icono'] ?> menu-icon"></i>
+            <span class="menu-title"><?= ucfirst(str_replace('_', ' ', $grupo)) ?></span>
+            <i class="menu-arrow"></i>
+          </a>
+          <div class="collapse" id="submenu-<?= $grupo ?>">
+            <ul class="nav flex-column sub-menu">
+              <?php foreach ($itemsActivos as $modulo => $etiqueta): ?>
+                <li class="nav-item">
+                  <a class="nav-link" href="/Marie_stopes_pruebas/<?= $modulo ?>">
+                    <span class="menu-title"><?= $etiqueta ?></span>
+                  </a>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        </li>
+      <?php endif; ?>
+
     <?php endforeach; ?>
 
   </ul>

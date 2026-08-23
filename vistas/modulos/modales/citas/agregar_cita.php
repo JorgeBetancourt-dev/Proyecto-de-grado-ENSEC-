@@ -9,6 +9,33 @@
 
         <div class="modal-body">
 
+          <!-- Médico / Fecha / Hora: fijados al tocar el calendario -->
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Médico:</label>
+                <select class="form-control" id="nuevaCitaIdMedicoDisplay" disabled>
+                  <option value="">—</option>
+                </select>
+                <input type="hidden" name="nuevaCitaIdMedico" id="nuevaCitaIdMedico">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Fecha:</label>
+                <input type="date" class="form-control" id="nuevaCitaFechaDisplay" disabled>
+                <input type="hidden" name="nuevaCitaFecha" id="nuevaCitaFecha">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Hora:</label>
+                <input type="time" class="form-control" id="nuevaCitaHoraDisplay" disabled>
+                <input type="hidden" name="nuevaCitaHora" id="nuevaCitaHora">
+              </div>
+            </div>
+          </div>
+
           <!-- Buscar paciente por carnet -->
           <div class="form-group">
             <label>Carnet de identidad:</label>
@@ -134,59 +161,21 @@
             </div>
           </div>
 
-          <!-- Fecha y Tipo de cita -->
-          <?php
-            date_default_timezone_set('America/La_Paz');
-            $hoy        = date('Y-m-d');
-            $horaActual = date('H:i');
-            $diaSemana  = date('N'); // 7 = domingo
-            if ($diaSemana == 7) {
-                $hoy = date('Y-m-d', strtotime('+1 day'));
-            }
-          ?>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group">
-                <label>Fecha de la cita: <small class="text-muted">No domingos</small></label>
-                <input type="date" class="form-control" name="nuevaCitaFecha" id="nuevaCitaFecha"
-                       min="<?= $hoy ?>" required>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group">
-                <label>Tipo de cita:</label>
-                <select class="form-control" name="nuevaCitaIdTipoCita" id="nuevaCitaIdTipoCita" required>
-                  <option value="">Seleccione un tipo</option>
-                  <?php
-                    $tiposCita = ControladorTipoCita::ctrMostrarTiposCita(null, null);
-                    foreach ($tiposCita as $tc):
-                  ?>
-                    <option value="<?= $tc["id_tipo_cita"] ?>" data-tiempo="<?= $tc["tiempo"] ?>">
-                      <?= htmlspecialchars($tc["nombre"]) ?> (<?= $tc["tiempo"] ?> min)
-                    </option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- Médico y Hora -->
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group">
-                <label>Médico: <small class="text-muted" id="labelMedicoInfo">Seleccione tipo y fecha primero</small></label>
-                <select class="form-control" name="nuevaCitaIdMedico" id="nuevaCitaIdMedico" disabled required>
-                  <option value="">Seleccione un médico</option>
-                </select>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group">
-                <label>Hora de la cita: <small class="text-muted">07:30 - 19:50 (Sáb hasta 13:30)</small></label>
-                <input type="time" class="form-control" name="nuevaCitaHora" id="nuevaCitaHora"
-                       min="07:30" max="19:50" step="600" required>
-              </div>
-            </div>
+          <!-- Tipo de cita: se deshabilitan las opciones que no caben en el horario elegido -->
+          <div class="form-group">
+            <label>Tipo de cita:</label>
+            <select class="form-control" name="nuevaCitaIdTipoCita" id="nuevaCitaIdTipoCita" required>
+              <option value="">Seleccione un tipo</option>
+              <?php
+                $tiposCita = ControladorTipoCita::ctrMostrarTiposCita(null, null);
+                foreach ($tiposCita as $tc):
+              ?>
+                <option value="<?= $tc["id_tipo_cita"] ?>" data-tiempo="<?= $tc["tiempo"] ?>">
+                  <?= htmlspecialchars($tc["nombre"]) ?> (<?= $tc["tiempo"] ?> min)
+                </option>
+              <?php endforeach; ?>
+            </select>
+            <small class="text-muted">Los tipos que no caben en el horario elegido aparecen deshabilitados.</small>
           </div>
 
         </div>

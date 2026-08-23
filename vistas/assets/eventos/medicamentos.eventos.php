@@ -39,10 +39,12 @@ document.addEventListener("click", function(e) {
     if (e.target.classList.contains("btnEditarMedicamento")) {
         let id          = e.target.getAttribute("data-id");
         let nombre      = e.target.getAttribute("data-nombre");
+        let precio      = e.target.getAttribute("data-precio");
         let descripcion = e.target.getAttribute("data-descripcion");
 
         document.getElementById("editarIdMedicamento").value          = id;
         document.getElementById("editarNombreMedicamento").value      = nombre;
+        document.getElementById("editarPrecioMedicamento").value      = precio;
         document.getElementById("editarDescripcionMedicamento").value = descripcion;
     }
 });

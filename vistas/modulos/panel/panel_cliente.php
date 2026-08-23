@@ -19,7 +19,6 @@ include "vistas/assets/eventos/clientes.eventos.php";
           <tr>
             <th>#</th>
             <th>Nombre</th>
-            <th>Apellidos</th>
             <th>NIT</th>
             <th>Acciones</th>
           </tr>
@@ -33,13 +32,11 @@ include "vistas/assets/eventos/clientes.eventos.php";
           <tr>
             <td><?= $id ?></td>
             <td><?= htmlspecialchars($value["nombre"]) ?></td>
-            <td><?= htmlspecialchars($value["apellidos"]) ?></td>
             <td><?= htmlspecialchars($value["nit"] ?? "—") ?></td>
             <td>
               <button class="btn btn-warning btnEditarCliente"
                 data-id="<?= $id ?>"
                 data-nombre="<?= htmlspecialchars($value["nombre"]) ?>"
-                data-apellidos="<?= htmlspecialchars($value["apellidos"]) ?>"
                 data-nit="<?= htmlspecialchars($value["nit"] ?? "") ?>"
                 data-toggle="modal"
                 data-target="#modalEditarCliente">

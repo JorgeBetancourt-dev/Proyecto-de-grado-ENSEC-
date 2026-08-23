@@ -24,21 +24,23 @@ class ModeloMedicamentos {
 
     static public function mdlCrearMedicamento($tabla, $datos) {
         $stmt = Conexion::conectar()->prepare(
-            "INSERT INTO $tabla (nombre, descripcion, activo) 
-             VALUES (:nombre, :descripcion, 1)"
+            "INSERT INTO $tabla (nombre, descripcion, precio, activo) 
+             VALUES (:nombre, :descripcion, :precio, 1)"
         );
         $stmt->bindParam(":nombre",      $datos["nombre"],      PDO::PARAM_STR);
         $stmt->bindParam(":descripcion", $datos["descripcion"], PDO::PARAM_STR);
+        $stmt->bindParam(":precio",      $datos["precio"],      PDO::PARAM_STR);
         return $stmt->execute() ? "ok" : "error";
     }
 
     static public function mdlEditarMedicamento($tabla, $datos) {
         $stmt = Conexion::conectar()->prepare(
-            "UPDATE $tabla SET nombre = :nombre, descripcion = :descripcion 
+            "UPDATE $tabla SET nombre = :nombre, descripcion = :descripcion, precio = :precio 
              WHERE id_medicamento = :id"
         );
         $stmt->bindParam(":nombre",      $datos["nombre"],      PDO::PARAM_STR);
         $stmt->bindParam(":descripcion", $datos["descripcion"], PDO::PARAM_STR);
+        $stmt->bindParam(":precio",      $datos["precio"],      PDO::PARAM_STR);
         $stmt->bindParam(":id",          $datos["id"],          PDO::PARAM_INT);
         return $stmt->execute() ? "ok" : "error";
     }

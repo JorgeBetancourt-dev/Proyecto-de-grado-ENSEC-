@@ -8,6 +8,7 @@
 
         <div class="text-center mb-3">
           <span id="detEstadoBadge" class="label" style="font-size:14px; padding:6px 16px; border-radius:20px;"></span>
+          <span id="detPagoBadge" class="label" style="font-size:14px; padding:6px 16px; border-radius:20px; margin-left:6px;"></span>
         </div>
 
         <table class="table table-bordered" style="margin-bottom:0;">
@@ -47,6 +48,9 @@
       <div class="modal-footer">
         <button type="button" data-dismiss="modal" class="btn btn-default">
           <i class="fa fa-times"></i> Cerrar
+        </button>
+        <button type="button" class="btn btn-success" id="btnIrACobrar" style="display:none;">
+          <i class="fa fa-dollar"></i> Cobrar
         </button>
         <button type="button" class="btn btn-danger" id="btnCancelarCita" style="display:none;">
           <i class="fa fa-ban"></i> Cancelar cita

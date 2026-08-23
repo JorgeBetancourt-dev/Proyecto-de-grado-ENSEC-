@@ -1,37 +1,16 @@
 <?php
 class ControladorCitas {
 
-    // Obtener citas para FullCalendar (AJAX GET)
-    static public function ctrMostrarCitasCalendario() {
-        if (isset($_GET["action"]) && $_GET["action"] == "getCitas") {
-            $citas   = ModeloCitas::mdlMostrarCitasCalendario();
-            $eventos = [];
-            foreach ($citas as $c) {
-                $colores = [
-                    "pendiente" => "#3788d8",
-                    "atendida"  => "#28a745",
-                    "cancelada" => "#dc3545"
-                ];
-                $color = $colores[$c["estado"]] ?? "#3788d8";
-                $eventos[] = [
-                    "id"              => $c["id_cita"],
-                    "title"           => $c["pac_nombre"] . " " . $c["pac_apellidos"],
-                    "start"           => $c["fecha"] . "T" . $c["hora"],
-                    "backgroundColor" => $color,
-                    "borderColor"     => $color,
-                    "extendedProps"   => [
-                        "estado"          => $c["estado"],
-                        "pac_ci"          => $c["pac_ci"],
-                        "pac_telefono"    => $c["pac_telefono"],
-                        "medico"          => $c["medico"]          ?? "Sin asignar",
-                        "tipo_cita"       => $c["tipo_cita"]       ?? "Sin especificar",
-                        "recepcionista"   => $c["recepcionista_registra"],
-                        "id_tipo_cita"    => $c["id_tipo_cita"],
-                        "id_medico"       => $c["id_medico"]
-                    ]
-                ];
-            }
-            echo json_encode($eventos);
+    // Llamado directo desde panel_atencion.php (no AJAX)
+    static public function ctrMostrarCitasPendientesHoy($id_medico) {
+        return ModeloCitas::mdlMostrarCitasPendientesHoy($id_medico);
+    }
+
+    // Médicos activos para el panel de selección (AJAX GET)
+    static public function ctrMostrarMedicosActivos() {
+        if (isset($_GET["action"]) && $_GET["action"] == "getMedicosActivos") {
+            $medicos = ModeloCitas::mdlMostrarMedicosActivos();
+            echo json_encode($medicos);
             exit;
         }
     }
@@ -75,16 +54,67 @@ class ControladorCitas {
         }
     }
 
-    // Obtener médicos filtrados por horario (AJAX GET)
+    // Obtener médicos con horario activo en una fecha (AJAX GET)
     static public function ctrMostrarMedicos() {
         if (isset($_GET["action"]) && $_GET["action"] == "getMedicos") {
-            $fecha        = $_GET["fecha"]        ?? "";
-            $id_tipo_cita = $_GET["id_tipo_cita"] ?? "";
-            if (empty($fecha) || empty($id_tipo_cita)) { echo json_encode([]); exit; }
-            $medicos = ModeloCitas::mdlMostrarMedicosPorHorario($fecha, $id_tipo_cita);
+            $fecha = $_GET["fecha"] ?? "";
+            if (empty($fecha)) { echo json_encode([]); exit; }
+            $medicos = ModeloCitas::mdlMostrarMedicosPorHorario($fecha);
             echo json_encode($medicos);
             exit;
         }
+    }
+
+    // Eventos del calendario para un médico (AJAX GET) — antes vivía suelto en index.php
+    static public function ctrMostrarCitasCalendario() {
+        if (isset($_GET["action"]) && $_GET["action"] == "getCitas") {
+            if (session_status() == PHP_SESSION_NONE) session_start();
+            if (!isset($_SESSION["IdUsuario"])) {
+                echo json_encode(["error" => "No autorizado"]); exit;
+            }
+            header("Content-Type: application/json");
+
+            $id_medico = $_GET["id_medico"] ?? null;
+            $citas     = ModeloCitas::mdlMostrarCitasCalendario($id_medico);
+            $colores   = ["pendiente" => "#3788d8", "atendida" => "#28a745", "cancelada" => "#dc3545"];
+            $eventos   = [];
+            foreach ($citas as $c) {
+                $color = $colores[$c["estado"]] ?? "#3788d8";
+                $eventos[] = [
+                    "id"              => $c["id_cita"],
+                    "title"           => $c["pac_nombre"] . " " . $c["pac_apellidos"],
+                    "start"           => str_replace(" ", "T", $c["fecha_hora"]),
+                    "backgroundColor" => $color,
+                    "borderColor"     => $color,
+                    "extendedProps"   => [
+                        "estado"        => $c["estado"],
+                        "pac_ci"        => $c["pac_ci"],
+                        "pac_telefono"  => $c["pac_telefono"],
+                        "medico"        => $c["medico"] ?? "Sin asignar",
+                        "recepcionista" => $c["recepcionista_registra"],
+                        "tipo_cita"     => $c["tipo_cita"] ?? "Sin especificar",
+                        "pagado"        => (bool) $c["pagado"]
+                    ]
+                ];
+            }
+            echo json_encode($eventos);
+            exit;
+        }
+    }
+
+    // Verifica que $hora (HH:MM) esté dentro del horario real del médico para $fecha.
+    // Centraliza lo que antes estaba hardcodeado y duplicado en crtCrearCita y ctrReprogramarCita.
+    private static function ctrHoraDentroDeHorarioMedico($id_medico, $fecha, $hora) {
+        $horario = ModeloCitas::mdlObtenerHorarioMedico($id_medico);
+        if (!$horario) return false;
+
+        $esSabado = (date('N', strtotime($fecha)) == 6);
+        $inicio   = $esSabado ? $horario["horaI_sabado"] : $horario["hora_inicio"];
+        $fin      = $esSabado ? $horario["horaF_sabado"] : $horario["hora_fin"];
+
+        if (empty($inicio) || empty($fin)) return false; // el médico no atiende ese día
+
+        return ($hora >= substr($inicio, 0, 5) && $hora <= substr($fin, 0, 5));
     }
 
     // Obtener horas ocupadas de un médico (AJAX GET)
@@ -134,11 +164,9 @@ class ControladorCitas {
                 echo json_encode(["error" => "No se pueden programar citas los domingos"]); exit;
             }
 
-            // Validar hora
-            $esSabado = (date('N', strtotime($fecha)) == 6);
-            $horaMax  = $esSabado ? "13:30" : "19:50";
-            if ($hora < "07:30" || $hora > $horaMax) {
-                echo json_encode(["error" => "Hora fuera del horario de atención"]); exit;
+            // Validar hora contra el horario real del médico elegido
+            if (!self::ctrHoraDentroDeHorarioMedico($id_medico, $fecha, $hora)) {
+                echo json_encode(["error" => "Hora fuera del horario de atención de ese médico"]); exit;
             }
 
             // Validar que no sea en el pasado
@@ -193,20 +221,12 @@ class ControladorCitas {
                 header("Location: " . $_SERVER["HTTP_REFERER"]); exit;
             }
 
-            $diaSemana = date('N', strtotime($fecha));
-            if ($diaSemana == 7) {
+            if (date('N', strtotime($fecha)) == 7) {
                 $_SESSION["crear_cita"] = "domingo";
                 header("Location: " . $_SERVER["HTTP_REFERER"]); exit;
             }
 
-            if ($hora >= "01:00" && $hora < "07:30") {
-                $_SESSION["crear_cita"] = "hora_no_permitida";
-                header("Location: " . $_SERVER["HTTP_REFERER"]); exit;
-            }
-
-            $esSabado = ($diaSemana == 6);
-            $horaMax  = $esSabado ? "13:30" : "19:50";
-            if ($hora > $horaMax) {
+            if (!self::ctrHoraDentroDeHorarioMedico($id_medico, $fecha, $hora)) {
                 $_SESSION["crear_cita"] = "hora_no_permitida";
                 header("Location: " . $_SERVER["HTTP_REFERER"]); exit;
             }
@@ -233,6 +253,12 @@ class ControladorCitas {
             exit;
         }
     }
+
+    // Llamado directo desde ControladorConsultas al finalizar una consulta
+    static public function ctrMarcarAtendida($id_cita) {
+        return ModeloCitas::mdlMarcarAtendida($id_cita);
+    }
+
     // Cancelar cita (AJAX POST)
     static public function ctrCancelarCita() {
         if (isset($_POST["action"]) && $_POST["action"] == "cancelarCita") {
@@ -249,4 +275,3 @@ class ControladorCitas {
         }
     }
 }
-?>

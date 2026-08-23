@@ -62,5 +62,38 @@ class ModeloPacientes {
         $stmt->bindParam(":id", $id, PDO::PARAM_INT);
         return $stmt->execute() ? "ok" : "error";
     }
+
+    // ── Buscador del panel de pagos (coincidencia exacta por CI) ────────────
+
+    static public function mdlBuscarPacientePorCI($ci) {
+        $stmt = Conexion::conectar()->prepare(
+            "SELECT id_paciente, nombre, apellidos, ci FROM pacientes WHERE ci = :ci AND activo = 1 LIMIT 1"
+        );
+        $stmt->bindParam(":ci", $ci, PDO::PARAM_STR);
+        $stmt->execute();
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->closeCursor();
+        return $resultado;
+    }
+
+    // Registro rápido: solo nombre y CI obligatorios, el resto opcional
+    static public function mdlCrearPacienteRapido($datos) {
+        $conn = Conexion::conectar();
+        $stmt = $conn->prepare(
+            "INSERT INTO pacientes (nombre, apellidos, ci, grupo_sanguineo, telefono, fecha_nacimiento, direccion, activo)
+             VALUES (:nombre, :apellidos, :ci, :grupo_sanguineo, :telefono, :fecha_nacimiento, :direccion, 1)"
+        );
+        $stmt->bindParam(":nombre", $datos["nombre"], PDO::PARAM_STR);
+        $stmt->bindValue(":apellidos", $datos["apellidos"] ?: null, $datos["apellidos"] ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindParam(":ci", $datos["ci"], PDO::PARAM_STR);
+        $stmt->bindValue(":grupo_sanguineo", $datos["grupo_sanguineo"] ?: null, $datos["grupo_sanguineo"] ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(":telefono", $datos["telefono"] ?: null, $datos["telefono"] ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(":fecha_nacimiento", $datos["fecha_nacimiento"] ?: null, $datos["fecha_nacimiento"] ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(":direccion", $datos["direccion"] ?: null, $datos["direccion"] ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        if (!$stmt->execute()) {
+            return null;
+        }
+        return (int) $conn->lastInsertId();
+    }
 }
 ?>

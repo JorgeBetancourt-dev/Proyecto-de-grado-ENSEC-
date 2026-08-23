@@ -7,10 +7,10 @@ class ControladorPacientes {
         return $respuesta;
     }
 
-static public function crtCrearPacientes() {
-    if (isset($_POST["nuevoNombre"], $_POST["nuevoApellidos"], $_POST["nuevoCI"],
-              $_POST["nuevoGrupoSanguineo"], $_POST["nuevoTelefono"],
-              $_POST["nuevaFechaNacimiento"], $_POST["nuevaDireccion"])) {
+    static public function crtCrearPacientes() {
+        if (isset($_POST["nuevoNombre"], $_POST["nuevoApellidos"], $_POST["nuevoCI"],
+                  $_POST["nuevoGrupoSanguineo"], $_POST["nuevoTelefono"],
+                  $_POST["nuevaFechaNacimiento"], $_POST["nuevaDireccion"])) {
 
             if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoNombre"])       &&
                 preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoApellidos"])    &&
@@ -95,6 +95,21 @@ static public function crtCrearPacientes() {
                 header("Location: " . $_SERVER["HTTP_REFERER"]);
                 exit;
             }
+        }
+    }
+
+    // ── Buscador del panel de pagos (coincidencia exacta por CI) ────────────
+
+    static public function ctrBuscarPacientePorCI() {
+        if (isset($_GET["buscarPacientePorCI"])) {
+            $ci = trim($_GET["buscarPacientePorCI"]);
+            if ($ci === "") {
+                echo json_encode(["encontrado" => false]);
+                exit;
+            }
+            $paciente = ModeloPacientes::mdlBuscarPacientePorCI($ci);
+            echo json_encode(["encontrado" => (bool) $paciente, "paciente" => $paciente ?: null]);
+            exit;
         }
     }
 }

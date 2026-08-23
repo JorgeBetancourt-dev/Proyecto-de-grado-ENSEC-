@@ -2,7 +2,7 @@
 class ControladorTipoServicio {
 
     static public function ctrMostrarTipoServicio($item, $valor) {
-        $tabla = "tipo_servicio";
+        $tabla = "servicios";
         $respuesta = ModeloTipoServicio::mdlMostrarTipoServicio($tabla, $item, $valor);
         return $respuesta;
     }
@@ -12,7 +12,7 @@ class ControladorTipoServicio {
             if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoNombreTipoServicio"]) &&
                 preg_match('/^\d+(\.\d{1,2})?$/', $_POST["nuevoPrecioTipoServicio"])) {
 
-                $tabla = "tipo_servicio";
+                $tabla = "servicios";
                 $datos = array(
                     "nombre" => $_POST["nuevoNombreTipoServicio"],
                     "precio" => $_POST["nuevoPrecioTipoServicio"]
@@ -36,7 +36,7 @@ class ControladorTipoServicio {
                 preg_match('/^\d+(\.\d{1,2})?$/', $_POST["editarPrecioTipoServicio"])          &&
                 is_numeric($_POST["editarIdTipoServicio"])) {
 
-                $tabla = "tipo_servicio";
+                $tabla = "servicios";
                 $datos = array(
                     "id"     => $_POST["editarIdTipoServicio"],
                     "nombre" => $_POST["editarNombreTipoServicio"],
@@ -57,7 +57,7 @@ class ControladorTipoServicio {
     static public function ctrEliminarTipoServicio() {
         if (isset($_POST["eliminarTipoServicio"])) {
             if (is_numeric($_POST["eliminarTipoServicio"])) {
-                $tabla     = "tipo_servicio";
+                $tabla     = "servicios";
                 $id        = $_POST["eliminarTipoServicio"];
                 $respuesta = ModeloTipoServicio::mdlEliminarTipoServicio($tabla, $id);
 

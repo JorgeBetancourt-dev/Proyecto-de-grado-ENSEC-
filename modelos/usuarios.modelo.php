@@ -47,7 +47,7 @@ class ModeloUsuarios {
         $stmt->bindParam(":id_rol",     $datos["id_rol"],     PDO::PARAM_INT);
         $stmt->bindParam(":id_horario", $datos["id_horario"], PDO::PARAM_INT);
         return $stmt->execute() ? "ok" : "error";
-    }
+    } 
 
     static public function mdlEditarUsuario($tabla, $datos) {
         $stmt = Conexion::conectar()->prepare(

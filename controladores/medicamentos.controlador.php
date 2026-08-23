@@ -8,13 +8,16 @@ class ControladorMedicamentos {
     }
 
     static public function crtCrearMedicamento() {
-        if (isset($_POST["nuevoNombreMedicamento"])) {
-            if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoNombreMedicamento"])) {
+        if (isset($_POST["nuevoNombreMedicamento"], $_POST["nuevoPrecioMedicamento"])) {
+            if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoNombreMedicamento"]) &&
+                is_numeric($_POST["nuevoPrecioMedicamento"]) &&
+                $_POST["nuevoPrecioMedicamento"] >= 0) {
 
                 $tabla = "medicamentos";
                 $datos = array(
                     "nombre"      => trim($_POST["nuevoNombreMedicamento"]),
-                    "descripcion" => trim($_POST["nuevoDescripcionMedicamento"] ?? "")
+                    "descripcion" => trim($_POST["nuevoDescripcionMedicamento"] ?? ""),
+                    "precio"      => $_POST["nuevoPrecioMedicamento"]
                 );
 
                 $respuesta = ModeloMedicamentos::mdlCrearMedicamento($tabla, $datos);
@@ -29,15 +32,18 @@ class ControladorMedicamentos {
     }
 
     static public function ctrEditarMedicamento() {
-        if (isset($_POST["editarIdMedicamento"], $_POST["editarNombreMedicamento"])) {
+        if (isset($_POST["editarIdMedicamento"], $_POST["editarNombreMedicamento"], $_POST["editarPrecioMedicamento"])) {
             if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["editarNombreMedicamento"]) &&
-                is_numeric($_POST["editarIdMedicamento"])) {
+                is_numeric($_POST["editarIdMedicamento"]) &&
+                is_numeric($_POST["editarPrecioMedicamento"]) &&
+                $_POST["editarPrecioMedicamento"] >= 0) {
 
                 $tabla = "medicamentos";
                 $datos = array(
                     "id"          => $_POST["editarIdMedicamento"],
                     "nombre"      => trim($_POST["editarNombreMedicamento"]),
-                    "descripcion" => trim($_POST["editarDescripcionMedicamento"] ?? "")
+                    "descripcion" => trim($_POST["editarDescripcionMedicamento"] ?? ""),
+                    "precio"      => $_POST["editarPrecioMedicamento"]
                 );
 
                 $respuesta = ModeloMedicamentos::mdlEditarMedicamento($tabla, $datos);

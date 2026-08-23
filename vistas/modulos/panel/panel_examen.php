@@ -12,13 +12,14 @@ include "vistas/assets/eventos/examenes.eventos.php";
 </div>
 
 <div class="row">
-  <div class="col-6">
+  <div class="col-8">
     <div class="box-body pt-3">
       <table class="table table-bordered table-striped tablas" width="100%">
         <thead>
           <tr>
             <th>#</th>
             <th>Nombre</th>
+            <th>Precio</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -31,10 +32,12 @@ include "vistas/assets/eventos/examenes.eventos.php";
           <tr>
             <td><?= $id ?></td>
             <td><?= htmlspecialchars($value["nombre"]) ?></td>
+            <td>$<?= number_format($value["precio"], 2) ?></td>
             <td>
               <button class="btn btn-warning btnEditarExamen"
                 data-id="<?= $id ?>"
                 data-nombre="<?= htmlspecialchars($value["nombre"]) ?>"
+                data-precio="<?= $value["precio"] ?>"
                 data-toggle="modal"
                 data-target="#modalEditarExamen">
                 Editar
