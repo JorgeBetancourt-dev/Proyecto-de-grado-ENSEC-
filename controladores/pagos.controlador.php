@@ -221,6 +221,7 @@ class ControladorPagos {
             $_SESSION["carrito_pago"] = [
                 "id_paciente" => null, "paciente_nombre" => null, "paciente_ci" => null,
                 "id_cliente" => null, "cliente_nombre" => null, "cliente_nit" => null,
+                "id_cita" => null,
                 "lineas" => [],
                 "next_linea_id" => 1,
             ];
@@ -386,13 +387,14 @@ class ControladorPagos {
 
             $carrito = $_SESSION["carrito_pago"] ?? null;
             $metodo  = trim($_POST["carritoFinalizarMetodo"]);
-            $id_cita = !empty($_POST["carritoFinalizarIdCita"]) ? (int) $_POST["carritoFinalizarIdCita"] : null;
             $id_usuario = (int) $_SESSION["IdUsuario"];
 
             if (!$carrito || empty($carrito["lineas"]) || $metodo === "") {
                 echo json_encode(["status" => "error", "mensaje" => "Agrega al menos un ítem y selecciona el método de pago"]);
                 exit;
             }
+
+            $id_cita = $carrito["id_cita"] ?? null;
 
             $id_servicio_prestado = ModeloPagos::mdlConfirmarCarrito($carrito, $id_cita, $id_usuario, $metodo);
 
@@ -402,8 +404,26 @@ class ControladorPagos {
             }
 
             unset($_SESSION["carrito_pago"]);
-            echo json_encode(["status" => "ok", "id_servicio_prestado" => $id_servicio_prestado]);
+            echo json_encode(["status" => "ok", "id_servicio_prestado" => $id_servicio_prestado, "id_cita" => $id_cita]);
             exit;
         }
+    }
+    // Se llama al entrar a panel_pago.php con ?id_cita=X. Precarga paciente + id_cita.
+    // Si ya había un carrito EN CURSO para esta misma cita, lo conserva (no pierde los ítems ya agregados).
+    static public function ctrCarritoIniciarDesdeCita($id_cita, $id_paciente, $paciente_nombre, $paciente_ci) {
+        self::ctrCarritoObtenerOInicializar();
+
+        if (($_SESSION["carrito_pago"]["id_cita"] ?? null) == $id_cita) {
+            return $_SESSION["carrito_pago"];
+        }
+
+        $_SESSION["carrito_pago"] = [
+            "id_paciente" => $id_paciente, "paciente_nombre" => $paciente_nombre, "paciente_ci" => $paciente_ci,
+            "id_cliente" => null, "cliente_nombre" => null, "cliente_nit" => null,
+            "id_cita" => $id_cita,
+            "lineas" => [],
+            "next_linea_id" => 1,
+        ];
+        return $_SESSION["carrito_pago"];
     }
 }

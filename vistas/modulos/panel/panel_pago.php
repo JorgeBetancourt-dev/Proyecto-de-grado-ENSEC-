@@ -6,14 +6,15 @@ $id_usuario = (int) $_SESSION["IdUsuario"];
 $id_cita_get = $_GET["id_cita"] ?? null;
 $tieneCita = false;
 $cita = null;
-$id_cita = 0;
 
 $catalogoServicios    = ControladorPagos::ctrMostrarCatalogoServicios();
 $catalogoExamenes     = ControladorPagos::ctrMostrarCatalogoExamenes();
 $catalogoMedicamentos = ControladorPagos::ctrMostrarCatalogoMedicamentos();
 
+$examenesSugeridos = [];
+$medicamentosSugeridos = [];
+
 if ($id_cita_get !== null) {
-    // ── Flujo CON cita: sin cambios respecto a la versión anterior ─────────
     if (!is_numeric($id_cita_get)) { echo '<p class="text-danger">Cita no válida.</p>'; return; }
     $id_cita = (int) $id_cita_get;
 
@@ -21,43 +22,28 @@ if ($id_cita_get !== null) {
     if (!$cita) { echo '<p class="text-danger">Cita no encontrada.</p>'; return; }
     $tieneCita = true;
 
-    $pago = ControladorPagos::ctrIniciarCobro((int) $cita["id_paciente"], $id_cita, $id_usuario);
-    if (!$pago) { echo '<p class="text-danger">No se pudo iniciar el cobro.</p>'; return; }
+    ControladorPagos::ctrCarritoIniciarDesdeCita(
+        $id_cita,
+        (int) $cita["id_paciente"],
+        trim($cita["pac_nombre"] . " " . $cita["pac_apellidos"]),
+        $cita["pac_ci"]
+    );
 
-    $lineas = ControladorPagos::ctrMostrarLineasPago((int) $pago["id_servicio_prestado"]);
-
-    $examenesSugeridos = [];
-    $medicamentosSugeridos = [];
     $consulta = ControladorConsultas::ctrObtenerConsultaPorCita($id_cita);
     if ($consulta) {
-        $examenesSugeridos = ControladorPagos::ctrExamenesPendientesCobro((int) $consulta["id_consulta"], (int) $pago["id_servicio_prestado"]);
-        $medicamentosSugeridos = ControladorPagos::ctrMedicamentosPendientesCobro((int) $consulta["id_consulta"], (int) $pago["id_servicio_prestado"]);
-    }
-} else {
-    // ── Flujo SIN cita: todo vive en el carrito de sesión ──────────────────
-    $carrito = ControladorPagos::ctrCarritoLeer();
-    $totalCarrito = 0;
-    foreach ($carrito["lineas"] as $l) {
-        $totalCarrito += $l["precio"] * $l["cantidad"];
+        // Nota: estos ya no se comparan contra detalle_servicio (no existe hasta confirmar);
+        // se muestran siempre como sugerencia, y el propio carrito evita duplicados en pantalla.
+        $examenesSugeridos = ControladorPagos::ctrExamenesPendientesCobro((int) $consulta["id_consulta"], 0);
+        $medicamentosSugeridos = ControladorPagos::ctrMedicamentosPendientesCobro((int) $consulta["id_consulta"], 0);
     }
 }
 
-$mensajes = [
-    "pago_error"      => ["error",   "No se pudo completar la acción, revisa los datos"],
-    "linea_agregada"  => ["success", "Ítem agregado al cobro"],
-    "linea_quitada"   => ["success", "Ítem quitado del cobro"],
-];
+$carrito = ControladorPagos::ctrCarritoLeer();
+$totalCarrito = 0;
+foreach ($carrito["lineas"] as $l) {
+    $totalCarrito += $l["precio"] * $l["cantidad"];
+}
 ?>
-
-<?php if ($tieneCita && isset($_SESSION["accion_pago"]) && isset($mensajes[$_SESSION["accion_pago"]])):
-    [$icon, $title] = $mensajes[$_SESSION["accion_pago"]];
-?>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    Swal.fire({ icon: "<?= $icon ?>", title: "<?= $title ?>", confirmButtonText: "Cerrar" });
-});
-</script>
-<?php endif; unset($_SESSION["accion_pago"]); ?>
 
 <style>
 .panel-pago-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
@@ -80,7 +66,7 @@ document.addEventListener("DOMContentLoaded", function () {
 .linea-cuenta .meta{font-size:0.85em;color:#888;}
 </style>
 
-<div id="cobro-wrapper">
+<div id="cobro-wrapper" data-tiene-cita="<?= $tieneCita ? "1" : "0" ?>" data-id-cita="<?= $tieneCita ? (int) $id_cita_get : 0 ?>">
 
 <div class="panel-pago-header">
     <h4><i class="fa fa-dollar"></i> <?= $tieneCita ? "Cobro de la cita" : "Registro de Pagos y Facturación" ?></h4>
@@ -92,15 +78,16 @@ document.addEventListener("DOMContentLoaded", function () {
     <div style="flex:1 1 600px;min-width:0;">
 
         <?php if ($tieneCita): ?>
+        <!-- Datos de la cita + paciente fijo (no se busca ni se cambia) -->
         <div class="card-box">
-            <h5><i class="fa fa-user"></i> Paciente de la cita</h5>
-            <p style="margin:3px 0;"><strong>Paciente:</strong> <?= htmlspecialchars($cita["pac_nombre"] . " " . $cita["pac_apellidos"]) ?></p>
-            <p style="margin:3px 0;"><strong>Carnet:</strong> <?= htmlspecialchars($cita["pac_ci"]) ?></p>
+            <h5><i class="fa fa-calendar-check-o"></i> Datos de la Cita</h5>
+            <p style="margin:3px 0;"><strong>Paciente:</strong> <?= htmlspecialchars($carrito["paciente_nombre"]) ?></p>
+            <p style="margin:3px 0;"><strong>Carnet:</strong> <?= htmlspecialchars($carrito["paciente_ci"]) ?></p>
             <p style="margin:3px 0;"><strong>Fecha de la cita:</strong> <?= htmlspecialchars($cita["fecha"]) ?> <?= htmlspecialchars($cita["hora"]) ?></p>
         </div>
-        <?php else: ?>
+        <?php endif; ?>
 
-        <!-- Datos del Cliente (Facturación) — carrito en sesión -->
+        <!-- Datos del Cliente (Facturación) — siempre por carrito, opcional en ambos flujos -->
         <div class="card-box">
             <h5><i class="fa fa-file-text"></i> Datos del Cliente (Facturación)</h5>
 
@@ -126,7 +113,8 @@ document.addEventListener("DOMContentLoaded", function () {
             </div>
         </div>
 
-        <!-- Datos del Paciente (Atención) — carrito en sesión -->
+        <?php if (!$tieneCita): ?>
+        <!-- Datos del Paciente (Atención) — solo en flujo sin cita -->
         <div class="card-box">
             <h5><i class="fa fa-user"></i> Datos del Paciente (Atención)</h5>
 
@@ -158,28 +146,16 @@ document.addEventListener("DOMContentLoaded", function () {
             <h5><i class="fa fa-lightbulb-o"></i> Pendientes de la consulta</h5>
             <p class="text-muted">Estos ítems fueron solicitados por el médico en la consulta de esta cita y todavía no se cobraron.</p>
             <?php foreach ($examenesSugeridos as $ex): ?>
-            <form method="POST" class="row align-items-center mb-2">
-                <input type="hidden" name="lineaIdServicioPrestado" value="<?= (int) $pago["id_servicio_prestado"] ?>">
-                <input type="hidden" name="lineaIdCita" value="<?= $id_cita ?>">
-                <input type="hidden" name="lineaTipo" value="examen">
-                <input type="hidden" name="lineaIdReferencia" value="<?= (int) $ex["id_examen"] ?>">
-                <input type="hidden" name="lineaCantidad" value="1">
-                <div class="col-md-7"><i class="fa fa-flask"></i> <?= htmlspecialchars($ex["nombre"]) ?> (<?= ucfirst($ex["tipo"]) ?>)</div>
-                <div class="col-md-3"><input type="number" step="0.01" class="form-control form-control-sm" name="lineaPrecio" value="<?= $ex["costo"] ?>" required></div>
-                <div class="col-md-2"><button type="submit" class="btn btn-sm btn-warning btn-block"><i class="fa fa-plus"></i> Cobrar</button></div>
-            </form>
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-grow-1"><i class="fa fa-flask"></i> <?= htmlspecialchars($ex["nombre"]) ?> (<?= ucfirst($ex["tipo"]) ?>) — Bs. <?= number_format($ex["precio"], 2) ?></div>
+                <button type="button" class="btn btn-sm btn-warning" onclick="agregarLineaCarrito('examen', <?= $ex["id_examen"] ?>, '<?= htmlspecialchars($ex["nombre"], ENT_QUOTES) ?>', <?= $ex["precio"] ?>, 1)"><i class="fa fa-plus"></i> Cobrar</button>
+            </div>
             <?php endforeach; ?>
             <?php foreach ($medicamentosSugeridos as $med): ?>
-            <form method="POST" class="row align-items-center mb-2">
-                <input type="hidden" name="lineaIdServicioPrestado" value="<?= (int) $pago["id_servicio_prestado"] ?>">
-                <input type="hidden" name="lineaIdCita" value="<?= $id_cita ?>">
-                <input type="hidden" name="lineaTipo" value="medicamento">
-                <input type="hidden" name="lineaIdReferencia" value="<?= (int) $med["id_medicamento"] ?>">
-                <div class="col-md-5"><i class="fa fa-pills"></i> <?= htmlspecialchars($med["nombre"]) ?></div>
-                <div class="col-md-2"><input type="number" min="1" class="form-control form-control-sm" name="lineaCantidad" value="1" required></div>
-                <div class="col-md-3"><input type="number" step="0.01" class="form-control form-control-sm" name="lineaPrecio" value="<?= $med["precio"] ?>" required></div>
-                <div class="col-md-2"><button type="submit" class="btn btn-sm btn-warning btn-block"><i class="fa fa-plus"></i> Cobrar</button></div>
-            </form>
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-grow-1"><i class="fa fa-pills"></i> <?= htmlspecialchars($med["nombre"]) ?> — Bs. <?= number_format($med["precio"], 2) ?></div>
+                <button type="button" class="btn btn-sm btn-warning" onclick="agregarLineaCarrito('medicamento', <?= $med["id_medicamento"] ?>, '<?= htmlspecialchars($med["nombre"], ENT_QUOTES) ?>', <?= $med["precio"] ?>, 1)"><i class="fa fa-plus"></i> Cobrar</button>
+            </div>
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
@@ -194,74 +170,33 @@ document.addEventListener("DOMContentLoaded", function () {
                 <div class="concepto-tab" data-tab="medicamentos" onclick="cambiarTabConcepto('medicamentos')">Medicamentos</div>
             </div>
 
-            <!-- Servicios -->
             <div class="concepto-panel activo" id="panel-servicios">
                 <div class="concepto-grid">
                     <?php foreach ($catalogoServicios as $s): ?>
-                    <?php if ($tieneCita): ?>
-                    <form method="POST" class="concepto-card">
-                        <input type="hidden" name="lineaIdServicioPrestado" value="<?= (int) $pago["id_servicio_prestado"] ?>">
-                        <input type="hidden" name="lineaIdCita" value="<?= $id_cita ?>">
-                        <input type="hidden" name="lineaTipo" value="servicio">
-                        <input type="hidden" name="lineaIdReferencia" value="<?= $s["id_servicio"] ?>">
-                        <input type="hidden" name="lineaPrecio" value="<?= $s["precio"] ?>">
-                        <div><div class="nombre"><?= htmlspecialchars($s["nombre"]) ?></div><div class="precio">Bs. <?= number_format($s["precio"], 2) ?></div></div>
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> Añadir</button>
-                    </form>
-                    <?php else: ?>
                     <div class="concepto-card">
                         <div><div class="nombre"><?= htmlspecialchars($s["nombre"]) ?></div><div class="precio">Bs. <?= number_format($s["precio"], 2) ?></div></div>
                         <button type="button" class="btn btn-primary btn-sm" onclick="agregarLineaCarrito('servicio', <?= $s["id_servicio"] ?>, '<?= htmlspecialchars($s["nombre"], ENT_QUOTES) ?>', <?= $s["precio"] ?>, 1)"><i class="fa fa-plus"></i> Añadir</button>
                     </div>
-                    <?php endif; ?>
                     <?php endforeach; ?>
                     <?php if (empty($catalogoServicios)): ?><p class="text-muted">No hay servicios en el catálogo.</p><?php endif; ?>
                 </div>
             </div>
 
-            <!-- Laboratorios (exámenes) -->
             <div class="concepto-panel" id="panel-laboratorios">
                 <div class="concepto-grid">
                     <?php foreach ($catalogoExamenes as $ex): ?>
-                    <?php if ($tieneCita): ?>
-                    <form method="POST" class="concepto-card">
-                        <input type="hidden" name="lineaIdServicioPrestado" value="<?= (int) $pago["id_servicio_prestado"] ?>">
-                        <input type="hidden" name="lineaIdCita" value="<?= $id_cita ?>">
-                        <input type="hidden" name="lineaTipo" value="examen">
-                        <input type="hidden" name="lineaIdReferencia" value="<?= $ex["id_examen"] ?>">
-                        <input type="hidden" name="lineaPrecio" value="<?= $ex["precio"] ?>">
-                        <input type="hidden" name="lineaCantidad" value="1">
-                        <div><div class="nombre"><?= htmlspecialchars($ex["nombre"]) ?></div><div class="descripcion"><?= ucfirst($ex["tipo"]) ?></div><div class="precio">Bs. <?= number_format($ex["precio"], 2) ?></div></div>
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> Añadir</button>
-                    </form>
-                    <?php else: ?>
                     <div class="concepto-card">
                         <div><div class="nombre"><?= htmlspecialchars($ex["nombre"]) ?></div><div class="descripcion"><?= ucfirst($ex["tipo"]) ?></div><div class="precio">Bs. <?= number_format($ex["precio"], 2) ?></div></div>
                         <button type="button" class="btn btn-primary btn-sm" onclick="agregarLineaCarrito('examen', <?= $ex["id_examen"] ?>, '<?= htmlspecialchars($ex["nombre"], ENT_QUOTES) ?>', <?= $ex["precio"] ?>, 1)"><i class="fa fa-plus"></i> Añadir</button>
                     </div>
-                    <?php endif; ?>
                     <?php endforeach; ?>
                     <?php if (empty($catalogoExamenes)): ?><p class="text-muted">No hay exámenes en el catálogo.</p><?php endif; ?>
                 </div>
             </div>
 
-            <!-- Medicamentos -->
             <div class="concepto-panel" id="panel-medicamentos">
                 <div class="concepto-grid">
                     <?php foreach ($catalogoMedicamentos as $med): ?>
-                    <?php if ($tieneCita): ?>
-                    <form method="POST" class="concepto-card">
-                        <input type="hidden" name="lineaIdServicioPrestado" value="<?= (int) $pago["id_servicio_prestado"] ?>">
-                        <input type="hidden" name="lineaIdCita" value="<?= $id_cita ?>">
-                        <input type="hidden" name="lineaTipo" value="medicamento">
-                        <input type="hidden" name="lineaIdReferencia" value="<?= $med["id_medicamento"] ?>">
-                        <input type="hidden" name="lineaPrecio" value="<?= $med["precio"] ?>">
-                        <div class="nombre mb-2"><?= htmlspecialchars($med["nombre"]) ?></div>
-                        <div class="precio"><?= number_format($med["precio"], 2) ?></div>
-                        <input type="number" min="1" class="form-control form-control-sm mb-2" name="lineaCantidad" value="1" required>
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> Añadir</button>
-                    </form>
-                    <?php else: ?>
                     <div class="concepto-card">
                         <div class="nombre mb-1"><?= htmlspecialchars($med["nombre"]) ?></div>
                         <div class="precio mb-2">Bs. <?= number_format($med["precio"], 2) ?></div>
@@ -269,7 +204,6 @@ document.addEventListener("DOMContentLoaded", function () {
                         <input type="number" min="1" class="form-control form-control-sm mb-2" id="cant-med-<?= $med["id_medicamento"] ?>" value="1">
                         <button type="button" class="btn btn-primary btn-sm" onclick="agregarMedicamentoCarrito(<?= $med["id_medicamento"] ?>, '<?= htmlspecialchars($med["nombre"], ENT_QUOTES) ?>', <?= $med["precio"] ?>)"><i class="fa fa-plus"></i> Añadir</button>
                     </div>
-                    <?php endif; ?>
                     <?php endforeach; ?>
                     <?php if (empty($catalogoMedicamentos)): ?><p class="text-muted">No hay medicamentos en el catálogo.</p><?php endif; ?>
                 </div>
@@ -282,80 +216,26 @@ document.addEventListener("DOMContentLoaded", function () {
         <div class="card-box detalle-cuenta">
             <h5><i class="fa fa-file-text-o"></i> Detalle de Cuenta</h5>
 
-            <?php if ($tieneCita): ?>
-                <div id="lineas-cuenta">
-                <?php if (empty($lineas)): ?>
-                    <p class="text-muted">Todavía no hay ítems en este cobro.</p>
-                <?php else: foreach ($lineas as $l):
-                    $nombre = $l["nombre_servicio"] ?? $l["nombre_examen"] ?? $l["nombre_medicamento"] ?? "—";
-                ?>
-                <div class="linea-cuenta">
-                    <div><div class="nombre"><?= htmlspecialchars($nombre) ?></div><div class="meta">Cant. <?= (int) $l["cantidad"] ?> × Bs. <?= number_format($l["precio_final"], 2) ?></div></div>
-                    <div class="text-right">
-                        <div class="nombre">Bs. <?= number_format($l["subtotal"], 2) ?></div>
-                        <form method="POST" class="d-inline" onsubmit="return confirm('¿Quitar este ítem del cobro?');">
-                            <input type="hidden" name="quitarLineaId" value="<?= (int) $l["id_detalle_servicio"] ?>">
-                            <input type="hidden" name="quitarLineaIdServicioPrestado" value="<?= (int) $pago["id_servicio_prestado"] ?>">
-                            <input type="hidden" name="quitarLineaIdCita" value="<?= $id_cita ?>">
-                            <button type="submit" class="btn btn-link text-danger p-0"><i class="fa fa-trash"></i></button>
-                        </form>
-                    </div>
-                </div>
-                <?php endforeach; endif; ?>
-                </div>
+            <div id="lineas-cuenta"></div>
+            <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+                <strong>Total a Pagar</strong>
+                <strong style="font-size:1.3em;color:#28a745;" id="total-pagar">Bs. 0.00</strong>
+            </div>
 
-                <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
-                    <strong>Total a Pagar</strong>
-                    <strong style="font-size:1.3em;color:#28a745;">Bs. <?= number_format($pago["costo_total"], 2) ?></strong>
-                </div>
+            <div class="form-group">
+                <label>Método de pago</label>
+                <select class="form-control" id="metodo-pago">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="qr">QR</option>
+                    <option value="transferencia">Transferencia</option>
+                </select>
+            </div>
+            <p class="text-muted" id="texto-cliente-factura"><small></small></p>
 
-                <form method="POST">
-                    <input type="hidden" name="finalizarPagoIdServicioPrestado" value="<?= (int) $pago["id_servicio_prestado"] ?>">
-                    <input type="hidden" name="finalizarPagoIdCita" value="<?= $id_cita ?>">
-                    <div class="form-group">
-                        <label>Método de pago</label>
-                        <select class="form-control" name="finalizarPagoMetodo" required>
-                            <option value="efectivo" <?= $pago["metodo_pago"] === "efectivo" ? "selected" : "" ?>>Efectivo</option>
-                            <option value="tarjeta"  <?= $pago["metodo_pago"] === "tarjeta"  ? "selected" : "" ?>>Tarjeta</option>
-                            <option value="qr"       <?= $pago["metodo_pago"] === "qr"       ? "selected" : "" ?>>QR</option>
-                            <option value="transferencia" <?= $pago["metodo_pago"] === "transferencia" ? "selected" : "" ?>>Transferencia</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Cliente para factura (opcional)</label>
-                        <input type="text" class="form-control" name="finalizarPagoClienteNombre" placeholder="Nombre/Razón social">
-                    </div>
-                    <div class="form-group">
-                        <label>NIT (opcional)</label>
-                        <input type="text" class="form-control" name="finalizarPagoClienteNit" placeholder="NIT">
-                    </div>
-                    <button type="submit" class="btn btn-success btn-block" <?= $pago["costo_total"] <= 0 ? "disabled" : "" ?>><i class="fa fa-check"></i> Realizar Pago</button>
-                    <a href="index.php?ruta=panel_cita" class="btn btn-default btn-block mt-2"><i class="fa fa-times"></i> Cancelar</a>
-                </form>
-
-            <?php else: ?>
-                <!-- Sin cita: se llena/actualiza por JS desde el carrito -->
-                <div id="lineas-cuenta"></div>
-                <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
-                    <strong>Total a Pagar</strong>
-                    <strong style="font-size:1.3em;color:#28a745;" id="total-pagar">Bs. 0.00</strong>
-                </div>
-
-                <div class="form-group">
-                    <label>Método de pago</label>
-                    <select class="form-control" id="metodo-pago">
-                        <option value="efectivo">Efectivo</option>
-                        <option value="tarjeta">Tarjeta</option>
-                        <option value="qr">QR</option>
-                        <option value="transferencia">Transferencia</option>
-                    </select>
-                </div>
-                <p class="text-muted" id="texto-cliente-factura"><small></small></p>
-
-                <button type="button" class="btn btn-success btn-block" id="btn-realizar-pago" disabled onclick="finalizarPagoCarrito()"><i class="fa fa-check"></i> Realizar Pago</button>
-                <a href="#" class="btn btn-default btn-block mt-2" onclick="cancelarCarrito(); return false;"><i class="fa fa-times"></i> Cancelar</a>
-                <p class="text-muted text-center mt-2" id="texto-sin-items"><small>Agrega al menos un ítem para poder confirmar el cobro.</small></p>
-            <?php endif; ?>
+            <button type="button" class="btn btn-success btn-block" id="btn-realizar-pago" disabled onclick="finalizarPagoCarrito()"><i class="fa fa-check"></i> Realizar Pago</button>
+            <a href="#" class="btn btn-default btn-block mt-2" onclick="cancelarCarrito(); return false;"><i class="fa fa-times"></i> Cancelar</a>
+            <p class="text-muted text-center mt-2" id="texto-sin-items"><small>Agrega al menos un ítem para poder confirmar el cobro.</small></p>
         </div>
     </div>
 </div>
@@ -363,15 +243,16 @@ document.addEventListener("DOMContentLoaded", function () {
 </div><!-- /#cobro-wrapper -->
 
 <script>
+var wrapper = document.getElementById("cobro-wrapper");
+var tieneCita = wrapper.dataset.tieneCita === "1";
+var idCitaActual = parseInt(wrapper.dataset.idCita) || 0;
+
 function cambiarTabConcepto(tab) {
     document.querySelectorAll(".concepto-tab").forEach(function (el) { el.classList.toggle("activo", el.dataset.tab === tab); });
     document.querySelectorAll(".concepto-panel").forEach(function (el) { el.classList.remove("activo"); });
     document.getElementById("panel-" + tab).classList.add("activo");
 }
-</script>
 
-<?php if (!$tieneCita): ?>
-<script>
 // ── Render del carrito (Detalle de Cuenta) ──────────────────────────────
 
 function renderCarrito(carrito, total) {
@@ -437,7 +318,9 @@ function finalizarPagoCarrito() {
         .then(function (data) {
             if (data.status === "ok") {
                 Swal.fire({ icon: "success", title: "Pago registrado", confirmButtonText: "Cerrar" })
-                    .then(function () { window.location = "index.php?ruta=panel_pago"; });
+                    .then(function () {
+                        window.location = data.id_cita ? "index.php?ruta=panel_cita" : "index.php?ruta=panel_pago";
+                    });
             } else {
                 Swal.fire({ icon: "error", title: data.mensaje || "No se pudo registrar el cobro" });
             }
@@ -448,10 +331,13 @@ function cancelarCarrito() {
     var body = new URLSearchParams();
     body.append("carritoCancelar", "1");
     fetch("index.php", { method: "POST", body: body })
-        .then(function () { window.location = "index.php?ruta=panel_pago"; });
+        .then(function () {
+            window.location = tieneCita ? "index.php?ruta=panel_cita" : "index.php?ruta=panel_pago";
+        });
 }
 
-// ── Paciente ──────────────────────────────────────────────────────────────
+<?php if (!$tieneCita): ?>
+// ── Paciente (solo flujo sin cita) ──────────────────────────────────────
 
 function mostrarBuscadorPaciente() {
     document.getElementById("paciente-asignado").style.display = "none";
@@ -537,8 +423,9 @@ function aplicarPacienteAsignado(nombreCompleto, ci) {
     document.getElementById("paciente-buscador").style.display = "none";
     document.getElementById("resultado-paciente").innerHTML = "";
 }
+<?php endif; ?>
 
-// ── Cliente ───────────────────────────────────────────────────────────────
+// ── Cliente (ambos flujos) ───────────────────────────────────────────────
 
 function mostrarBuscadorCliente() {
     document.getElementById("cliente-asignado").style.display = "none";
@@ -615,7 +502,6 @@ function aplicarClienteAsignado(nombre, nit) {
     document.getElementById("resultado-cliente").innerHTML = "";
 }
 
-// Render inicial desde el carrito ya en sesión (por si hubo un refresh)
+// Render inicial desde el carrito ya en sesión
 renderCarrito(<?= json_encode($carrito) ?>, <?= json_encode($totalCarrito) ?>);
 </script>
-<?php endif; ?>

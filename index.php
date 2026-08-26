@@ -94,14 +94,15 @@ ControladorTipoCita::crtCrearTipoCita();
 ControladorTipoCita::ctrEditarTipoCita();
 ControladorTipoCita::ctrEliminarTipoCita();
 
-ControladorConsultas::ctrGuardarTriaje();               // POST: guardar triaje
-ControladorConsultas::ctrGuardarConsulta();              // POST: finalizar consulta
-ControladorConsultas::ctrAgregarExamen();                 // POST: solicitar examen
-ControladorConsultas::ctrQuitarExamen();                  // POST: quitar examen
-ControladorConsultas::ctrAgregarTratamiento();             // POST: agregar tratamiento
-ControladorConsultas::ctrQuitarTratamiento();              // POST: quitar tratamiento
-ControladorConsultas::ctrAgregarMedicamentoTratamiento();  // POST: agregar medicamento a tratamiento
-ControladorConsultas::ctrQuitarMedicamentoTratamiento();   // POST: quitar medicamento de tratamiento
+ControladorConsultas::ctrIrAConsulta();                  // GET: cita -> obtiene/crea consulta y redirige
+ControladorConsultas::ctrConsultaCarritoObtener();
+ControladorConsultas::ctrConsultaCarritoActualizarCampos();
+ControladorConsultas::ctrConsultaCarritoAgregarExamenes();
+ControladorConsultas::ctrConsultaCarritoQuitarExamen();
+ControladorConsultas::ctrConsultaCarritoAgregarMedicamentos();
+ControladorConsultas::ctrConsultaCarritoQuitarMedicamento();
+ControladorConsultas::ctrBuscarExamenesConsulta();
+ControladorConsultas::ctrBuscarMedicamentosConsulta();
 
 ControladorPagos::ctrAgregarLinea();                      // POST: agregar ítem al cobro
 ControladorPagos::ctrQuitarLinea();                       // POST: quitar ítem del cobro

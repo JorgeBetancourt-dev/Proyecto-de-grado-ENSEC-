@@ -209,6 +209,7 @@ class ControladorCitas {
     static public function crtCrearCita() {
         if (isset($_POST["nuevaCitaIdPaciente"])) {
             if (session_status() == PHP_SESSION_NONE) session_start();
+            date_default_timezone_set('America/La_Paz');
 
             $id_paciente  = $_POST["nuevaCitaIdPaciente"];
             $fecha        = $_POST["nuevaCitaFecha"];

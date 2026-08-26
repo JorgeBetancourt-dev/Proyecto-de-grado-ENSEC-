@@ -193,7 +193,7 @@ document.addEventListener("DOMContentLoaded", function () {
     cargarPanelMedicos();
 
     id("btnIrACobrar").addEventListener("click", function() {
-        window.location.href = "index.php?ruta=panel_servicio_prestado&id_cita=" + val("detIdCita");
+        window.location.href = "index.php?ruta=panel_pago&id_cita=" + val("detIdCita");
     });
 
     // ── Clic en el calendario: abre el formulario con médico/fecha/hora fijos ─
@@ -214,7 +214,11 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        if (d <= new Date()) {
+        var ahora = new Date();
+        var fechaHoy  = ahora.getFullYear()+"-"+String(ahora.getMonth()+1).padStart(2,"0")+"-"+String(ahora.getDate()).padStart(2,"0");
+        var horaAhora = String(ahora.getHours()).padStart(2,"0")+":"+String(ahora.getMinutes()).padStart(2,"0");
+
+        if (fecha < fechaHoy || (fecha === fechaHoy && hora <= horaAhora)) {
             swal({ icon:"warning", title:"Fecha u hora no válida", text:"No se pueden registrar citas en una fecha u hora pasada." });
             return;
         }
