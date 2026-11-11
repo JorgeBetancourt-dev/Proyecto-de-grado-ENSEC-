@@ -124,11 +124,10 @@ class ModeloPagos {
     static public function mdlMostrarLineasPago($id_servicio_prestado) {
         $stmt = Conexion::conectar()->prepare(
             "SELECT ds.id_detalle_servicio, ds.precio_final, ds.cantidad, ds.subtotal,
-                    s.nombre AS nombre_servicio, e.nombre AS nombre_examen, m.nombre AS nombre_medicamento
+                    s.nombre AS nombre_servicio, e.nombre AS nombre_examen
              FROM detalle_servicio ds
              LEFT JOIN servicios s     ON s.id_servicio      = ds.id_servicio
              LEFT JOIN examenes e      ON e.id_examen        = ds.id_examen
-             LEFT JOIN medicamentos m  ON m.id_medicamento   = ds.id_medicamento
              WHERE ds.id_servicio_prestado = :id AND ds.activo = 1
              ORDER BY ds.id_detalle_servicio ASC"
         );
@@ -141,13 +140,12 @@ class ModeloPagos {
 
     static public function mdlAgregarLinea($datos) {
         $stmt = Conexion::conectar()->prepare(
-            "INSERT INTO detalle_servicio (id_servicio_prestado, id_servicio, id_examen, id_medicamento, precio_final, cantidad, activo)
-             VALUES (:id_servicio_prestado, :id_servicio, :id_examen, :id_medicamento, :precio_final, :cantidad, 1)"
+            "INSERT INTO detalle_servicio (id_servicio_prestado, id_servicio, id_examen, precio_final, cantidad, activo)
+             VALUES (:id_servicio_prestado, :id_servicio, :id_examen, :precio_final, :cantidad, 1)"
         );
         $stmt->bindParam(":id_servicio_prestado", $datos["id_servicio_prestado"], PDO::PARAM_INT);
-        $stmt->bindValue(":id_servicio",     $datos["id_servicio"],     $datos["id_servicio"]     === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
-        $stmt->bindValue(":id_examen",       $datos["id_examen"],       $datos["id_examen"]        === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
-        $stmt->bindValue(":id_medicamento",  $datos["id_medicamento"],  $datos["id_medicamento"]   === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $stmt->bindValue(":id_servicio", $datos["id_servicio"], $datos["id_servicio"] === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $stmt->bindValue(":id_examen",   $datos["id_examen"],   $datos["id_examen"]   === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
         $stmt->bindParam(":precio_final", $datos["precio_final"], PDO::PARAM_STR);
         $stmt->bindParam(":cantidad",     $datos["cantidad"],     PDO::PARAM_INT);
         if (!$stmt->execute()) {
@@ -183,14 +181,6 @@ class ModeloPagos {
         return $resultado;
     }
 
-    static public function mdlMostrarCatalogoMedicamentos() {
-        $stmt = Conexion::conectar()->prepare("SELECT id_medicamento, nombre, descripcion, precio FROM medicamentos WHERE activo = 1 ORDER BY nombre ASC");
-        $stmt->execute();
-        $resultado = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $stmt->closeCursor();
-        return $resultado;
-    }
-
     // ── Sugeridos desde la consulta (exámenes/medicamentos aún no cobrados en este pago) ──
 
     static public function mdlExamenesPendientesCobro($id_consulta, $id_servicio_prestado) {
@@ -202,26 +192,6 @@ class ModeloPagos {
                AND e.id_examen NOT IN (
                    SELECT id_examen FROM detalle_servicio
                    WHERE id_servicio_prestado = :id_sp AND id_examen IS NOT NULL AND activo = 1
-               )"
-        );
-        $stmt->bindParam(":id_consulta", $id_consulta, PDO::PARAM_INT);
-        $stmt->bindParam(":id_sp", $id_servicio_prestado, PDO::PARAM_INT);
-        $stmt->execute();
-        $resultado = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $stmt->closeCursor();
-        return $resultado;
-    }
-
-    static public function mdlMedicamentosPendientesCobro($id_consulta, $id_servicio_prestado) {
-        $stmt = Conexion::conectar()->prepare(
-            "SELECT DISTINCT m.id_medicamento, m.nombre, m.precio
-             FROM detalle_tratamiento dt
-             INNER JOIN tratamientos t   ON t.id_tratamiento = dt.id_tratamiento
-             INNER JOIN medicamentos m   ON m.id_medicamento = dt.id_medicamento
-             WHERE t.id_consulta = :id_consulta AND t.activo = 1 AND dt.activo = 1
-               AND m.id_medicamento NOT IN (
-                   SELECT id_medicamento FROM detalle_servicio
-                   WHERE id_servicio_prestado = :id_sp AND id_medicamento IS NOT NULL AND activo = 1
                )"
         );
         $stmt->bindParam(":id_consulta", $id_consulta, PDO::PARAM_INT);
@@ -263,20 +233,19 @@ class ModeloPagos {
             $id_servicio_prestado = (int) $conn->lastInsertId();
 
             // 2. Insertar cada línea del carrito en detalle_servicio
+                        // 2. Insertar cada línea del carrito en detalle_servicio
             $stmtLinea = $conn->prepare(
-                "INSERT INTO detalle_servicio (id_servicio_prestado, id_servicio, id_examen, id_medicamento, precio_final, cantidad, activo)
-                 VALUES (:id_servicio_prestado, :id_servicio, :id_examen, :id_medicamento, :precio_final, :cantidad, 1)"
+                "INSERT INTO detalle_servicio (id_servicio_prestado, id_servicio, id_examen, precio_final, cantidad, activo)
+                 VALUES (:id_servicio_prestado, :id_servicio, :id_examen, :precio_final, :cantidad, 1)"
             );
 
             foreach ($carrito["lineas"] as $l) {
-                $id_servicio    = $l["tipo"] === "servicio"    ? $l["id_referencia"] : null;
-                $id_examen      = $l["tipo"] === "examen"      ? $l["id_referencia"] : null;
-                $id_medicamento = $l["tipo"] === "medicamento" ? $l["id_referencia"] : null;
+                $id_servicio = $l["tipo"] === "servicio" ? $l["id_referencia"] : null;
+                $id_examen   = $l["tipo"] === "examen"   ? $l["id_referencia"] : null;
 
                 $stmtLinea->bindParam(":id_servicio_prestado", $id_servicio_prestado, PDO::PARAM_INT);
-                $stmtLinea->bindValue(":id_servicio",    $id_servicio,    $id_servicio    === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
-                $stmtLinea->bindValue(":id_examen",      $id_examen,      $id_examen      === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
-                $stmtLinea->bindValue(":id_medicamento", $id_medicamento, $id_medicamento === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+                $stmtLinea->bindValue(":id_servicio", $id_servicio, $id_servicio === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+                $stmtLinea->bindValue(":id_examen",   $id_examen,   $id_examen   === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
                 $stmtLinea->bindValue(":precio_final", $l["precio"], PDO::PARAM_STR);
                 $stmtLinea->bindValue(":cantidad",     $l["cantidad"], PDO::PARAM_INT);
 
@@ -294,5 +263,24 @@ class ModeloPagos {
             }
             return null;
         }
+    }
+
+    // ── Datos completos para la factura (tras confirmar el pago) ────────────
+
+    static public function mdlObtenerDatosFactura($id_servicio_prestado) {
+        $stmt = Conexion::conectar()->prepare(
+            "SELECT sp.id_servicio_prestado, sp.fecha, sp.metodo_pago, sp.costo_total,
+                    p.nombre AS paciente_nombre, p.apellidos AS paciente_apellidos, p.ci AS paciente_ci,
+                    c.nombre AS cliente_nombre, c.nit AS cliente_nit
+             FROM servicio_prestado sp
+             LEFT JOIN pacientes p ON p.id_paciente = sp.id_paciente
+             LEFT JOIN clientes  c ON c.id_cliente  = sp.id_cliente
+             WHERE sp.id_servicio_prestado = :id AND sp.activo = 1"
+        );
+        $stmt->bindParam(":id", $id_servicio_prestado, PDO::PARAM_INT);
+        $stmt->execute();
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->closeCursor();
+        return $resultado;
     }
 }

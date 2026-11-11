@@ -201,10 +201,18 @@ class ControladorConsultas {
     }
         // ── Navegación desde el dashboard: cita -> consulta (crea si no existe) ──
 
-        static public function ctrIrAConsulta() {
+    static public function ctrIrAConsulta() {
         if (isset($_GET["irAConsulta"])) {
             $id_cita = (int) $_GET["irAConsulta"];
             if ($id_cita <= 0) { header("Location: index.php?ruta=inicio"); exit; }
+
+            if (!ModeloCitas::mdlCitaTienePago($id_cita)) {
+                if (session_status() == PHP_SESSION_NONE) session_start();
+                $_SESSION["dashboard_error"] = "cita_no_pagada";
+                header("Location: index.php?ruta=inicio");
+                exit;
+            }
+
             header("Location: index.php?ruta=panel_consulta&id_cita=" . $id_cita);
             exit;
         }
@@ -303,13 +311,16 @@ class ControladorConsultas {
         }
     }
 
-    // AJAX: agregar medicamentos en lote (desde el modal de Medicamentos — Bloque 4)
+    // AJAX: agregar medicamentos en lote (desde el modal de Medicamentos)
     static public function ctrConsultaCarritoAgregarMedicamentos() {
         if (isset($_POST["consultaCarritoIdCita"], $_POST["medicamentos"])) {
             self::ctrConsultaCarritoInicializar((int) $_POST["consultaCarritoIdCita"]);
 
             $medicamentos = json_decode($_POST["medicamentos"], true) ?: [];
+            $existentesIds = array_column($_SESSION["carrito_consulta"]["medicamentos"], "id_medicamento");
+
             foreach ($medicamentos as $med) {
+                if (in_array((int) $med["id_medicamento"], $existentesIds)) continue; // evita duplicados
                 $id = $_SESSION["carrito_consulta"]["next_linea_id"]++;
                 $_SESSION["carrito_consulta"]["medicamentos"][] = [
                     "id_linea"       => $id,
@@ -396,6 +407,45 @@ class ControladorConsultas {
 
             unset($_SESSION["carrito_consulta"]);
             echo json_encode(["status" => "ok", "id_consulta" => $id_consulta]);
+            exit;
+        }
+    }
+    // consultas_controlador.php
+
+    static public function ctrGenerarRecetaPDF() {
+        if (isset($_GET["generarRecetaConsulta"])) {
+            if (session_status() == PHP_SESSION_NONE) session_start();
+
+            $id_cita = (int) $_GET["generarRecetaConsulta"];
+
+            $datos = ModeloConsultas::mdlObtenerDatosRecetaPorCita($id_cita);
+            if (!$datos) {
+                http_response_code(404);
+                echo "Cita no encontrada.";
+                exit;
+            }
+
+            $carrito = $_SESSION["carrito_consulta"] ?? null;
+            $medicamentos = ($carrito && ($carrito["id_cita"] ?? null) == $id_cita) ? $carrito["medicamentos"] : [];
+
+            if (empty($medicamentos)) {
+                echo "Todavía no hay medicamentos agregados a la receta.";
+                exit;
+            }
+
+            require_once __DIR__ . "/../vistas/modulos/reportes/RecetaPDF.php";
+
+            $pdf = new RecetaPDF();
+            $pdf->generarReceta($datos, $medicamentos);
+
+            $carpetaDestino = __DIR__ . "/../reportes_generados/recetas/";
+            if (!is_dir($carpetaDestino)) {
+                mkdir($carpetaDestino, 0755, true);
+            }
+
+            $nombreArchivo = "receta_" . $id_cita . ".pdf";
+            $pdf->Output($carpetaDestino . $nombreArchivo, 'F');
+            $pdf->Output($nombreArchivo, 'I');
             exit;
         }
     }

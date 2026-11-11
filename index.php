@@ -40,6 +40,10 @@ require_once "modelos/consultas.modelo.php";
 require_once "controladores/pagos.controlador.php";
 require_once "modelos/pagos.modelo.php";
 
+require_once "modelos/historia_clinica.modelo.php";
+require_once "controladores/historia_clinica.controlador.php";
+ControladorHistoriaClinica::ctrGenerarPDF();
+
 ControladorUsuarios::ctrEliminarUsuarios();
 ControladorUsuarios::ctrEditarUsuarios();
 ControladorUsuarios::crtCrearUsuarios();
@@ -103,6 +107,7 @@ ControladorConsultas::ctrConsultaCarritoAgregarMedicamentos();
 ControladorConsultas::ctrConsultaCarritoQuitarMedicamento();
 ControladorConsultas::ctrBuscarExamenesConsulta();
 ControladorConsultas::ctrBuscarMedicamentosConsulta();
+ControladorConsultas::ctrConsultaFinalizar();
 
 ControladorPagos::ctrAgregarLinea();                      // POST: agregar ítem al cobro
 ControladorPagos::ctrQuitarLinea();                       // POST: quitar ítem del cobro
@@ -122,6 +127,32 @@ ControladorPagos::ctrCarritoQuitarLinea();                // AJAX POST: quitar �
 ControladorPagos::ctrCarritoCancelar();                   // AJAX POST: vaciar carrito
 
 ControladorPagos::ctrCarritoFinalizarPago();             // AJAX POST: confirmar y grabar el cobro completo
+
+
+
+ControladorPagos::ctrGenerarFacturaPDF(); //factura PDF
+ControladorConsultas::ctrGenerarRecetaPDF(); // Receta PDF
+
+// Reportes
+require_once "controladores/reportes.controlador.php";
+require_once "modelos/reportes.modelo.php";
+
+// Reportes de pagos
+ControladorReportes::ctrGenerarReportePagosDia();
+ControladorReportes::ctrGenerarReportePagosRango();
+ControladorReportes::ctrGenerarReportePagosPorMetodo();
+
+// Reportes de consultas
+ControladorReportes::ctrGenerarReporteConsultasPorMedico();
+ControladorReportes::ctrGenerarReporteConsultasConRecetas();
+ControladorReportes::ctrGenerarReporteConsultasConExamenes();
+
+// Reportes de citas
+ControladorReportes::ctrGenerarReporteCitasEntreFechas();
+ControladorReportes::ctrGenerarReporteCitasPorMedico();
+ControladorReportes::ctrGenerarReporteCitasAtendidas();
+ControladorReportes::ctrGenerarReporteCitasCanceladas();
+ControladorReportes::ctrGenerarReporteCitasPendientes();
 
 if (isset($_GET["action"]) && $_GET["action"] == "getPermisosPorRol") {
     $permisos = ControladorRoles::ctrMostrarPermisosPorRol((int)$_GET["id_rol"]);

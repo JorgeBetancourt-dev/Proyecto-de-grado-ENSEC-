@@ -35,7 +35,7 @@ class ModeloTipoServicio {
     static public function mdlEditarTipoServicio($tabla, $datos) {
         $stmt = Conexion::conectar()->prepare(
             "UPDATE $tabla SET nombre = :nombre, precio = :precio 
-             WHERE id_tipo_servicio = :id"
+             WHERE id_servicio = :id"
         );
         $stmt->bindParam(":nombre", $datos["nombre"], PDO::PARAM_STR);
         $stmt->bindParam(":precio", $datos["precio"], PDO::PARAM_STR);
@@ -45,7 +45,7 @@ class ModeloTipoServicio {
 
     static public function mdlEliminarTipoServicio($tabla, $id) {
         $stmt = Conexion::conectar()->prepare(
-            "UPDATE $tabla SET activo = 0 WHERE id_tipo_servicio = :id"
+            "UPDATE $tabla SET activo = 0 WHERE id_servicio = :id"
         );
         $stmt->bindParam(":id", $id, PDO::PARAM_INT);
         return $stmt->execute() ? "ok" : "error";

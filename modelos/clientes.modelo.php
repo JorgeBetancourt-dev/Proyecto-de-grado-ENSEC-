@@ -57,7 +57,7 @@ class ModeloClientes {
 
     static public function mdlBuscarClientePorNit($nit) {
         $stmt = Conexion::conectar()->prepare(
-            "SELECT id_cliente, nombre, nit FROM clientes WHERE nit = :nit AND activo = 1 LIMIT 1"
+            "SELECT id_cliente, nombre, apellidos, nit FROM clientes WHERE nit = :nit AND activo = 1 LIMIT 1"
         );
         $stmt->bindParam(":nit", $nit, PDO::PARAM_STR);
         $stmt->execute();
@@ -66,10 +66,11 @@ class ModeloClientes {
         return $resultado;
     }
 
-    static public function mdlCrearClienteRapido($nombre, $nit) {
+    static public function mdlCrearClienteRapido($nombre,$apellidos, $nit) {
         $conn = Conexion::conectar();
-        $stmt = $conn->prepare("INSERT INTO clientes (nombre, nit, activo) VALUES (:nombre, :nit, 1)");
+        $stmt = $conn->prepare("INSERT INTO clientes (nombre, apellidos, nit, activo) VALUES (:nombre, :apellidos, :nit, 1)");
         $stmt->bindParam(":nombre", $nombre, PDO::PARAM_STR);
+        $stmt->bindParam(":apellidos", $apellidos, PDO::PARAM_STR);
         $stmt->bindValue(":nit", $nit ?: null, $nit ? PDO::PARAM_STR : PDO::PARAM_NULL);
         if (!$stmt->execute()) {
             return null;

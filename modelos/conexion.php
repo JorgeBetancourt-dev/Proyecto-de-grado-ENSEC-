@@ -2,7 +2,7 @@
 
 class Conexion{
     static public function conectar(){
-        $link = new PDO("mysql:host=localhost;dbname=sistema_clinico_codigo",
+        $link = new PDO("mysql:host=localhost;dbname=sistema_clinico",
                         "root",
                         "");
 // utf8

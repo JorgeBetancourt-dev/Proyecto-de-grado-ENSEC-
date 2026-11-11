@@ -1,3 +1,4 @@
+
 <?php
 if (session_status() == PHP_SESSION_NONE) session_start();
 
@@ -7,12 +8,12 @@ $id_cita_get = $_GET["id_cita"] ?? null;
 $tieneCita = false;
 $cita = null;
 
+
+
 $catalogoServicios    = ControladorPagos::ctrMostrarCatalogoServicios();
 $catalogoExamenes     = ControladorPagos::ctrMostrarCatalogoExamenes();
-$catalogoMedicamentos = ControladorPagos::ctrMostrarCatalogoMedicamentos();
 
 $examenesSugeridos = [];
-$medicamentosSugeridos = [];
 
 if ($id_cita_get !== null) {
     if (!is_numeric($id_cita_get)) { echo '<p class="text-danger">Cita no válida.</p>'; return; }
@@ -34,7 +35,6 @@ if ($id_cita_get !== null) {
         // Nota: estos ya no se comparan contra detalle_servicio (no existe hasta confirmar);
         // se muestran siempre como sugerencia, y el propio carrito evita duplicados en pantalla.
         $examenesSugeridos = ControladorPagos::ctrExamenesPendientesCobro((int) $consulta["id_consulta"], 0);
-        $medicamentosSugeridos = ControladorPagos::ctrMedicamentosPendientesCobro((int) $consulta["id_consulta"], 0);
     }
 }
 
@@ -69,7 +69,7 @@ foreach ($carrito["lineas"] as $l) {
 <div id="cobro-wrapper" data-tiene-cita="<?= $tieneCita ? "1" : "0" ?>" data-id-cita="<?= $tieneCita ? (int) $id_cita_get : 0 ?>">
 
 <div class="panel-pago-header">
-    <h4><i class="fa fa-dollar"></i> <?= $tieneCita ? "Cobro de la cita" : "Registro de Pagos y Facturación" ?></h4>
+    <h4><i class="fa fa-dollar"></i> <?= $tieneCita ? "Cobro de la cita" : "Registro de Pagos" ?></h4>
     <span class="panel-pago-fecha"><i class="fa fa-calendar"></i> <?= date("d/m/Y") ?></span>
 </div>
 
@@ -89,7 +89,7 @@ foreach ($carrito["lineas"] as $l) {
 
         <!-- Datos del Cliente (Facturación) — siempre por carrito, opcional en ambos flujos -->
         <div class="card-box">
-            <h5><i class="fa fa-file-text"></i> Datos del Cliente (Facturación)</h5>
+            <h5><i class="fa fa-file-text"></i> Datos del Cliente </h5>
 
             <div id="cliente-asignado" style="<?= $carrito["id_cliente"] ? "" : "display:none;" ?>">
                 <div class="alert alert-success mb-2">
@@ -116,7 +116,7 @@ foreach ($carrito["lineas"] as $l) {
         <?php if (!$tieneCita): ?>
         <!-- Datos del Paciente (Atención) — solo en flujo sin cita -->
         <div class="card-box">
-            <h5><i class="fa fa-user"></i> Datos del Paciente (Atención)</h5>
+            <h5><i class="fa fa-user"></i> Datos del Paciente</h5>
 
             <div id="paciente-asignado" style="<?= $carrito["id_paciente"] ? "" : "display:none;" ?>">
                 <div class="alert alert-success mb-2">
@@ -141,7 +141,7 @@ foreach ($carrito["lineas"] as $l) {
         </div>
         <?php endif; ?>
 
-        <?php if ($tieneCita && (!empty($examenesSugeridos) || !empty($medicamentosSugeridos))): ?>
+        <?php if ($tieneCita && (!empty($examenesSugeridos))): ?>
         <div class="card-box" style="background:#fffbe6;">
             <h5><i class="fa fa-lightbulb-o"></i> Pendientes de la consulta</h5>
             <p class="text-muted">Estos ítems fueron solicitados por el médico en la consulta de esta cita y todavía no se cobraron.</p>
@@ -151,23 +151,19 @@ foreach ($carrito["lineas"] as $l) {
                 <button type="button" class="btn btn-sm btn-warning" onclick="agregarLineaCarrito('examen', <?= $ex["id_examen"] ?>, '<?= htmlspecialchars($ex["nombre"], ENT_QUOTES) ?>', <?= $ex["precio"] ?>, 1)"><i class="fa fa-plus"></i> Cobrar</button>
             </div>
             <?php endforeach; ?>
-            <?php foreach ($medicamentosSugeridos as $med): ?>
-            <div class="d-flex align-items-center mb-2">
-                <div class="flex-grow-1"><i class="fa fa-pills"></i> <?= htmlspecialchars($med["nombre"]) ?> — Bs. <?= number_format($med["precio"], 2) ?></div>
-                <button type="button" class="btn btn-sm btn-warning" onclick="agregarLineaCarrito('medicamento', <?= $med["id_medicamento"] ?>, '<?= htmlspecialchars($med["nombre"], ENT_QUOTES) ?>', <?= $med["precio"] ?>, 1)"><i class="fa fa-plus"></i> Cobrar</button>
-            </div>
-            <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
         <!-- Agregar Conceptos -->
         <div class="card-box">
-            <h5><i class="fa fa-shopping-cart"></i> Agregar Conceptos</h5>
+            <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
+                <h5 class="mb-2"><i class="fa fa-shopping-cart"></i> Agregar Conceptos</h5>
+                <input type="text" class="form-control" id="buscar-concepto" placeholder="Buscar servicio o laboratorio..." style="max-width:260px;">
+            </div>
 
             <div class="concepto-tabs">
                 <div class="concepto-tab activo" data-tab="servicios" onclick="cambiarTabConcepto('servicios')">Servicios</div>
                 <div class="concepto-tab" data-tab="laboratorios" onclick="cambiarTabConcepto('laboratorios')">Laboratorios</div>
-                <div class="concepto-tab" data-tab="medicamentos" onclick="cambiarTabConcepto('medicamentos')">Medicamentos</div>
             </div>
 
             <div class="concepto-panel activo" id="panel-servicios">
@@ -193,21 +189,6 @@ foreach ($carrito["lineas"] as $l) {
                     <?php if (empty($catalogoExamenes)): ?><p class="text-muted">No hay exámenes en el catálogo.</p><?php endif; ?>
                 </div>
             </div>
-
-            <div class="concepto-panel" id="panel-medicamentos">
-                <div class="concepto-grid">
-                    <?php foreach ($catalogoMedicamentos as $med): ?>
-                    <div class="concepto-card">
-                        <div class="nombre mb-1"><?= htmlspecialchars($med["nombre"]) ?></div>
-                        <div class="precio mb-2">Bs. <?= number_format($med["precio"], 2) ?></div>
-                        <label style="font-size:0.8em;color:#888;">Cantidad</label>
-                        <input type="number" min="1" class="form-control form-control-sm mb-2" id="cant-med-<?= $med["id_medicamento"] ?>" value="1">
-                        <button type="button" class="btn btn-primary btn-sm" onclick="agregarMedicamentoCarrito(<?= $med["id_medicamento"] ?>, '<?= htmlspecialchars($med["nombre"], ENT_QUOTES) ?>', <?= $med["precio"] ?>)"><i class="fa fa-plus"></i> Añadir</button>
-                    </div>
-                    <?php endforeach; ?>
-                    <?php if (empty($catalogoMedicamentos)): ?><p class="text-muted">No hay medicamentos en el catálogo.</p><?php endif; ?>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -228,8 +209,40 @@ foreach ($carrito["lineas"] as $l) {
                     <option value="efectivo">Efectivo</option>
                     <option value="tarjeta">Tarjeta</option>
                     <option value="qr">QR</option>
-                    <option value="transferencia">Transferencia</option>
                 </select>
+                <a href="#" id="link-metodo-secundario" class="small" style="color:#28a745;" onclick="toggleMetodoSecundario(); return false;">
+                    <i class="fa fa-plus-circle"></i> Agregar método de pago secundario
+                </a>
+            </div>
+
+            <div id="grupo-metodo-secundario" style="display:none;">
+                <div class="form-group">
+                    <label>Monto con método principal</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="monto-principal" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Método secundario</label>
+                    <select class="form-control" id="metodo-pago-secundario">
+                        <option value="efectivo">Efectivo</option>
+                        <option value="tarjeta">Tarjeta</option>
+                        <option value="qr">QR</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Monto con método secundario</label>
+                    <input type="text" class="form-control" id="monto-secundario" readonly>
+                </div>
+                <a href="#" class="small text-danger" onclick="toggleMetodoSecundario(); return false;">
+                    <i class="fa fa-times-circle"></i> Quitar método secundario
+                </a>
+            </div>
+
+            <div class="form-group" id="grupo-monto-efectivo" style="display:none;">
+                <label id="label-monto-efectivo">Monto recibido</label>
+                <input type="number" step="0.01" min="0" class="form-control" id="monto-recibido" placeholder="0.00">
+                <small class="mt-1 d-block">
+                    Cambio a devolver: <strong id="monto-cambio" style="color:#28a745;">Bs. 0.00</strong>
+                </small>
             </div>
             <p class="text-muted" id="texto-cliente-factura"><small></small></p>
 
@@ -246,6 +259,7 @@ foreach ($carrito["lineas"] as $l) {
 var wrapper = document.getElementById("cobro-wrapper");
 var tieneCita = wrapper.dataset.tieneCita === "1";
 var idCitaActual = parseInt(wrapper.dataset.idCita) || 0;
+var totalCarritoActual = 0;
 
 function cambiarTabConcepto(tab) {
     document.querySelectorAll(".concepto-tab").forEach(function (el) { el.classList.toggle("activo", el.dataset.tab === tab); });
@@ -271,7 +285,13 @@ function renderCarrito(carrito, total) {
         });
         cont.innerHTML = html;
     }
+    // Ver luego 
     document.getElementById("total-pagar").textContent = "Bs. " + parseFloat(total).toFixed(2);
+
+    document.getElementById("total-pagar").textContent = "Bs. " + parseFloat(total).toFixed(2);
+    totalCarritoActual = parseFloat(total) || 0;
+    actualizarCalculoPago();
+
     document.getElementById("btn-realizar-pago").disabled = total <= 0;
     document.getElementById("texto-sin-items").style.display = total > 0 ? "none" : "block";
 
@@ -294,11 +314,6 @@ function agregarLineaCarrito(tipo, idReferencia, nombre, precio, cantidad) {
         .then(function (data) { renderCarrito(data.carrito, data.total); });
 }
 
-function agregarMedicamentoCarrito(idMedicamento, nombre, precio) {
-    var cantidad = parseInt(document.getElementById("cant-med-" + idMedicamento).value) || 1;
-    agregarLineaCarrito("medicamento", idMedicamento, nombre, precio, cantidad);
-}
-
 function quitarLineaCarrito(idLinea) {
     var body = new URLSearchParams();
     body.append("carritoQuitarLineaId", idLinea);
@@ -309,7 +324,7 @@ function quitarLineaCarrito(idLinea) {
 }
 
 function finalizarPagoCarrito() {
-    var metodo = document.getElementById("metodo-pago").value;
+    var metodo = obtenerMetodoPagoFinal();
     var body = new URLSearchParams();
     body.append("carritoFinalizarMetodo", metodo);
 
@@ -317,10 +332,9 @@ function finalizarPagoCarrito() {
         .then(function (r) { return r.json(); })
         .then(function (data) {
             if (data.status === "ok") {
+                window.open("index.php?generarFacturaPago=" + data.id_servicio_prestado, "_blank");
                 Swal.fire({ icon: "success", title: "Pago registrado", confirmButtonText: "Cerrar" })
-                    .then(function () {
-                        window.location = data.id_cita ? "index.php?ruta=panel_cita" : "index.php?ruta=panel_pago";
-                    });
+                    .then(function () { window.location = "index.php?ruta=panel_pago"; });
             } else {
                 Swal.fire({ icon: "error", title: data.mensaje || "No se pudo registrar el cobro" });
             }
@@ -501,6 +515,105 @@ function aplicarClienteAsignado(nombre, nit) {
     document.getElementById("cliente-buscador").style.display = "none";
     document.getElementById("resultado-cliente").innerHTML = "";
 }
+
+var metodoSecundarioActivo = false;
+
+function toggleMetodoSecundario() {
+    metodoSecundarioActivo = !metodoSecundarioActivo;
+    document.getElementById("grupo-metodo-secundario").style.display = metodoSecundarioActivo ? "block" : "none";
+    document.getElementById("link-metodo-secundario").style.display = metodoSecundarioActivo ? "none" : "inline";
+    if (!metodoSecundarioActivo) {
+        document.getElementById("monto-principal").value = "";
+    }
+    actualizarCalculoPago();
+}
+
+function etiquetaMetodo(valor) {
+    var etiquetas = { efectivo: "Efectivo", tarjeta: "Tarjeta", qr: "QR", transferencia: "Transferencia" };
+    return etiquetas[valor] || valor;
+}
+
+function actualizarCalculoPago() {
+    var elGrupoEfectivo = document.getElementById("grupo-monto-efectivo");
+
+    if (!metodoSecundarioActivo) {
+        // ── Un solo método (comportamiento original) ──────────────────────
+        var metodo = document.getElementById("metodo-pago").value;
+        if (metodo !== "efectivo") {
+            elGrupoEfectivo.style.display = "none";
+            return;
+        }
+        elGrupoEfectivo.style.display = "block";
+        document.getElementById("label-monto-efectivo").textContent = "Monto recibido";
+        calcularCambio(totalCarritoActual);
+        return;
+    }
+
+    // ── Método dividido (principal + secundario) ────────────────────────
+    var montoPrincipal = parseFloat(document.getElementById("monto-principal").value) || 0;
+    var montoSecundario = Math.max(totalCarritoActual - montoPrincipal, 0);
+    document.getElementById("monto-secundario").value = montoSecundario.toFixed(2);
+
+    var metodoPrincipal = document.getElementById("metodo-pago").value;
+    var metodoSecundario = document.getElementById("metodo-pago-secundario").value;
+
+    if (metodoPrincipal === "efectivo") {
+        elGrupoEfectivo.style.display = "block";
+        document.getElementById("label-monto-efectivo").textContent = "Monto recibido en efectivo (principal)";
+        calcularCambio(montoPrincipal);
+    } else if (metodoSecundario === "efectivo") {
+        elGrupoEfectivo.style.display = "block";
+        document.getElementById("label-monto-efectivo").textContent = "Monto recibido en efectivo (secundario)";
+        calcularCambio(montoSecundario);
+    } else {
+        elGrupoEfectivo.style.display = "none";
+    }
+}
+
+function calcularCambio(montoAsignado) {
+    var recibido = parseFloat(document.getElementById("monto-recibido").value) || 0;
+    var cambio = recibido - montoAsignado;
+    var elCambio = document.getElementById("monto-cambio");
+
+    if (recibido <= 0) {
+        elCambio.textContent = "Bs. 0.00";
+        elCambio.style.color = "#28a745";
+    } else if (cambio < 0) {
+        elCambio.textContent = "Falta Bs. " + Math.abs(cambio).toFixed(2);
+        elCambio.style.color = "#dc3545";
+    } else {
+        elCambio.textContent = "Bs. " + cambio.toFixed(2);
+        elCambio.style.color = "#28a745";
+    }
+}
+
+function obtenerMetodoPagoFinal() {
+    if (!metodoSecundarioActivo) {
+        return document.getElementById("metodo-pago").value;
+    }
+    var montoPrincipal = parseFloat(document.getElementById("monto-principal").value) || 0;
+    var montoSecundario = Math.max(totalCarritoActual - montoPrincipal, 0);
+    var metodoPrincipal = etiquetaMetodo(document.getElementById("metodo-pago").value);
+    var metodoSecundario = etiquetaMetodo(document.getElementById("metodo-pago-secundario").value);
+
+    return metodoPrincipal + " Bs." + montoPrincipal.toFixed(2) + " + " + metodoSecundario + " Bs." + montoSecundario.toFixed(2);
+}
+
+document.getElementById("metodo-pago").addEventListener("change", actualizarCalculoPago);
+document.getElementById("metodo-pago-secundario").addEventListener("change", actualizarCalculoPago);
+document.getElementById("monto-principal").addEventListener("input", actualizarCalculoPago);
+document.getElementById("monto-recibido").addEventListener("input", actualizarCalculoPago);
+
+
+// ── Filtro de búsqueda de conceptos (servicios y laboratorios) ─────────
+document.getElementById("buscar-concepto").addEventListener("input", function () {
+    var termino = this.value.trim().toLowerCase();
+    document.querySelectorAll("#panel-servicios .concepto-card, #panel-laboratorios .concepto-card").forEach(function (card) {
+        var nombre = card.querySelector(".nombre").textContent.toLowerCase();
+        card.style.display = nombre.includes(termino) ? "" : "none";
+    });
+});
+
 
 // Render inicial desde el carrito ya en sesión
 renderCarrito(<?= json_encode($carrito) ?>, <?= json_encode($totalCarrito) ?>);

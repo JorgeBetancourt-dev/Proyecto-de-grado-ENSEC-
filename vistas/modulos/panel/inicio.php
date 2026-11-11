@@ -4,6 +4,9 @@ $fecha = date("Y-m-d");
 
 $esMedico = isset($_SESSION["nombre_rol"]) && strtolower($_SESSION["nombre_rol"]) === "medico";
 $citasHoy = $esMedico ? ControladorCitas::ctrMostrarCitasPendientesHoy((int) $_SESSION["IdUsuario"]) : [];
+$mensajesDashboard = [
+    "cita_no_pagada" => ["warning", "Esta cita todavía no fue pagada. Debe registrarse el pago antes de atenderla."],
+];
 ?>
 <div class="row">
     <div class="col-8">
@@ -14,6 +17,15 @@ $citasHoy = $esMedico ? ControladorCitas::ctrMostrarCitasPendientesHoy((int) $_S
                         <div class="row p-3">
                             <h3>Bienvenido <?php echo $_SESSION["nombre"] . " " . $_SESSION["apellido"] ?></h3>
                             <p class="card-text pt-2">Que vamos a realizar hoy</p>
+                                <?php if (isset($_SESSION["dashboard_error"]) && isset($mensajesDashboard[$_SESSION["dashboard_error"]])):
+                                    [$icon, $title] = $mensajesDashboard[$_SESSION["dashboard_error"]];
+                                ?>
+                                <script>
+                                document.addEventListener("DOMContentLoaded", function () {
+                                    Swal.fire({ icon: "<?= $icon ?>", title: "<?= $title ?>", confirmButtonText: "Cerrar" });
+                                });
+                                </script>
+                            <?php endif; unset($_SESSION["dashboard_error"]); ?>
                         </div> 
                     </div>
                 </div>
@@ -28,7 +40,7 @@ $citasHoy = $esMedico ? ControladorCitas::ctrMostrarCitasPendientesHoy((int) $_S
             <div class="row p-4">
                 <div class="col-12">
                     <div class="row p-3">
-                        <h3>Programación de citas</h3>
+                        <h3></h3>
                     </div>
                     <div class="row p-3">
                                 
@@ -56,7 +68,6 @@ $citasHoy = $esMedico ? ControladorCitas::ctrMostrarCitasPendientesHoy((int) $_S
                             <th>Paciente</th>
                             <th>Carnet</th>
                             <th>Tipo de cita</th>
-                            <th>Pago</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -67,13 +78,6 @@ $citasHoy = $esMedico ? ControladorCitas::ctrMostrarCitasPendientesHoy((int) $_S
                             <td><?= htmlspecialchars($c["nombre"] . " " . $c["apellidos"]) ?></td>
                             <td><?= htmlspecialchars($c["ci"]) ?></td>
                             <td><?= htmlspecialchars($c["tipo_cita"] ?? "Sin especificar") ?></td>
-                            <td>
-                                <?php if ($c["pagado"]): ?>
-                                    <span class="badge badge-success">Pagado</span>
-                                <?php else: ?>
-                                    <span class="badge badge-warning">Pendiente</span>
-                                <?php endif; ?>
-                            </td>
                             <td class="text-right">
                                 <a href="index.php?ruta=inicio&irAConsulta=<?= (int) $c["id_cita"] ?>" class="btn btn-sm btn-primary">
                                     <i class="fa fa-play"></i> Atender
@@ -81,6 +85,8 @@ $citasHoy = $esMedico ? ControladorCitas::ctrMostrarCitasPendientesHoy((int) $_S
                             </td>
                         </tr>
                         <?php endforeach; ?>
+                    </tbody>
+                </table>
                     </tbody>
                 </table>
                 <?php endif; ?>

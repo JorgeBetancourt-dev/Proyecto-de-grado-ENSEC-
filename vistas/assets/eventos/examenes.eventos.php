@@ -39,10 +39,12 @@ document.addEventListener("click", function(e) {
     if (e.target.classList.contains("btnEditarExamen")) {
         let id     = e.target.getAttribute("data-id");
         let nombre = e.target.getAttribute("data-nombre");
+        let tipo   = e.target.getAttribute("data-tipo");
         let precio = e.target.getAttribute("data-precio");
 
         document.getElementById("editarIdExamen").value     = id;
         document.getElementById("editarNombreExamen").value = nombre;
+        document.getElementById("editarTipoExamen").value   = tipo;
         document.getElementById("editarPrecioExamen").value = precio;
     }
 });

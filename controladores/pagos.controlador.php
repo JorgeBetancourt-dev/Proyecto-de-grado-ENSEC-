@@ -19,20 +19,51 @@ class ControladorPagos {
         return ModeloPagos::mdlMostrarCatalogoExamenes();
     }
 
-    static public function ctrMostrarCatalogoMedicamentos() {
-        return ModeloPagos::mdlMostrarCatalogoMedicamentos();
-    }
-
     static public function ctrExamenesPendientesCobro($id_consulta, $id_servicio_prestado) {
         return ModeloPagos::mdlExamenesPendientesCobro($id_consulta, $id_servicio_prestado);
     }
 
-    static public function ctrMedicamentosPendientesCobro($id_consulta, $id_servicio_prestado) {
-        return ModeloPagos::mdlMedicamentosPendientesCobro($id_consulta, $id_servicio_prestado);
-    }
         // Lectura directa del carrito para el render inicial de panel_pago.php (no AJAX)
     static public function ctrCarritoLeer() {
         return self::ctrCarritoObtenerOInicializar();
+    }
+
+        static public function ctrObtenerDatosFactura($id_servicio_prestado) {
+        return ModeloPagos::mdlObtenerDatosFactura($id_servicio_prestado);
+    }
+
+    // ── Generar y entregar la factura en PDF ─────────────────────────────────
+
+    static public function ctrGenerarFacturaPDF() {
+        if (isset($_GET["generarFacturaPago"])) {
+            $id_sp = (int) $_GET["generarFacturaPago"];
+
+            $datos = self::ctrObtenerDatosFactura($id_sp);
+            if (!$datos) {
+                http_response_code(404);
+                echo "Factura no encontrada.";
+                exit;
+            }
+
+            $lineas = ModeloPagos::mdlMostrarLineasPago($id_sp);
+
+            require_once __DIR__ . "/../vistas/modulos/reportes/FacturaPagoPDF.php";
+
+            $pdf = new FacturaPagoPDF();
+            $pdf->generarFactura($datos, $lineas);
+
+            $carpetaDestino = __DIR__ . "/../reportes_generados/facturas/";
+            if (!is_dir($carpetaDestino)) {
+                mkdir($carpetaDestino, 0755, true);
+            }
+
+            $nombreArchivo = "factura_" . $id_sp . ".pdf";
+            $rutaCompleta  = $carpetaDestino . $nombreArchivo;
+
+            $pdf->Output($rutaCompleta, 'F');
+            $pdf->Output($nombreArchivo, 'I');
+            exit;
+        }
     }
 
     // Redirección común: si hay cita, vuelve al panel de la cita; si no, vuelve al cobro suelto
@@ -57,10 +88,9 @@ class ControladorPagos {
 
             $datos = array(
                 "id_servicio_prestado" => $id_sp,
-                "id_servicio"          => $tipo === "servicio"    ? (int) $_POST["lineaIdReferencia"] : null,
-                "id_examen"            => $tipo === "examen"      ? (int) $_POST["lineaIdReferencia"] : null,
-                "id_medicamento"       => $tipo === "medicamento" ? (int) $_POST["lineaIdReferencia"] : null,
-                "precio_final"         => $_POST["lineaPrecio"]   ?? "0",
+                "id_servicio"          => $tipo === "servicio" ? (int) $_POST["lineaIdReferencia"] : null,
+                "id_examen"            => $tipo === "examen"   ? (int) $_POST["lineaIdReferencia"] : null,
+                "precio_final"         => $_POST["lineaPrecio"] ?? "0",
                 "cantidad"             => !empty($_POST["lineaCantidad"]) ? (int) $_POST["lineaCantidad"] : 1,
             );
 

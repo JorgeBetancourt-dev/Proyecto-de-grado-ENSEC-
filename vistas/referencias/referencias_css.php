@@ -20,3 +20,4 @@
 <link rel="stylesheet" href="vistas/assets/css/style_login.css">
 <link rel="stylesheet" href="vistas/assets/css/style_icon.css">
 <link rel="stylesheet" href="vistas/assets/css/style_calendario.css">
+<link rel="stylesheet" href="vistas/assets/css/style_consultas.css">

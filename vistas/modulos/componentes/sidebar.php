@@ -23,13 +23,6 @@ $configMenu = [
             "panel_cita" => "Citas",
         ],
     ],
-    "consulta" => [
-        "icono" => "fa fa-stethoscope",
-        "items" => [
-            "panel_consulta" => "Consultas",
-            "panel_atencion" => "Atención",
-        ],
-    ],
     "pago" => [
         "icono" => "fa fa-money",
         "items" => [
@@ -49,6 +42,12 @@ $configMenu = [
         "items" => [
             "panel_paciente" => "Pacientes",
             "panel_cliente"  => "Clientes",
+        ],
+    ],
+    "reporte" => [
+        "icono" => "fa fa-bar-chart",
+        "items" => [
+            "panel_reporte" => "Reportes",
         ],
     ],
 ];

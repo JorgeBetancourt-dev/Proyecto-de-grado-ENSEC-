@@ -8,14 +8,18 @@ class ControladorExamenes {
     }
 
     static public function crtCrearExamen() {
-        if (isset($_POST["nuevoNombreExamen"], $_POST["nuevoPrecioExamen"])) {
+        if (isset($_POST["nuevoNombreExamen"], $_POST["nuevoTipoExamen"], $_POST["nuevoPrecioExamen"])) {
+            $tiposValidos = array("laboratorio", "ecografia");
+
             if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["nuevoNombreExamen"]) &&
+                in_array($_POST["nuevoTipoExamen"], $tiposValidos) &&
                 is_numeric($_POST["nuevoPrecioExamen"]) &&
                 $_POST["nuevoPrecioExamen"] >= 0) {
 
                 $tabla = "examenes";
                 $datos = array(
                     "nombre" => trim($_POST["nuevoNombreExamen"]),
+                    "tipo"   => $_POST["nuevoTipoExamen"],
                     "precio" => $_POST["nuevoPrecioExamen"]
                 );
 
@@ -31,8 +35,11 @@ class ControladorExamenes {
     }
 
     static public function ctrEditarExamen() {
-        if (isset($_POST["editarIdExamen"], $_POST["editarNombreExamen"], $_POST["editarPrecioExamen"])) {
+        if (isset($_POST["editarIdExamen"], $_POST["editarNombreExamen"], $_POST["editarTipoExamen"], $_POST["editarPrecioExamen"])) {
+            $tiposValidos = array("laboratorio", "ecografia");
+
             if (preg_match('/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/', $_POST["editarNombreExamen"]) &&
+                in_array($_POST["editarTipoExamen"], $tiposValidos) &&
                 is_numeric($_POST["editarIdExamen"]) &&
                 is_numeric($_POST["editarPrecioExamen"]) &&
                 $_POST["editarPrecioExamen"] >= 0) {
@@ -41,6 +48,7 @@ class ControladorExamenes {
                 $datos = array(
                     "id"     => $_POST["editarIdExamen"],
                     "nombre" => trim($_POST["editarNombreExamen"]),
+                    "tipo"   => $_POST["editarTipoExamen"],
                     "precio" => $_POST["editarPrecioExamen"]
                 );
 

@@ -44,6 +44,9 @@ include "vistas/assets/eventos/pacientes.eventos.php";
             <td><?= htmlspecialchars($value["fecha_nacimiento"]) ?></td>
             <td><?= wrapText(htmlspecialchars($value["direccion"])) ?></td>
             <td>
+              <a class="btn btn-info" href="index.php?generarHistoriaClinica=<?= (int) $id ?>" target="_blank" rel="noopener">
+                <i class="fa fa-file-pdf-o"></i> Historia clínica
+              </a>
               <button class="btn btn-warning btnEditarPaciente"
                 data-id="<?= $id ?>"
                 data-nombre="<?= htmlspecialchars($value["nombre"]) ?>"

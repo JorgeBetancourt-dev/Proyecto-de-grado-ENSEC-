@@ -118,7 +118,7 @@ class ModeloConsultas {
         $stmt->closeCursor();
         return $resultado;
     }
-        static public function mdlMostrarCatalogoExamenesConsulta() {
+    static public function mdlMostrarCatalogoExamenesConsulta() {
         $stmt = Conexion::conectar()->prepare("SELECT id_examen, nombre, tipo FROM examenes WHERE activo = 1 ORDER BY nombre ASC");
         $stmt->execute();
         $resultado = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -128,7 +128,7 @@ class ModeloConsultas {
 
     static public function mdlMostrarExamenesConsulta($id_consulta) {
         $stmt = Conexion::conectar()->prepare(
-            "SELECT de.id_detalle_examen, de.estado, de.fecha_solicitud, e.nombre, e.tipo, e.costo
+            "SELECT de.id_detalle_examen, e.nombre, e.tipo, e.costo
              FROM detalle_examen de
              INNER JOIN examenes e ON e.id_examen = de.id_examen
              WHERE de.id_consulta = :id AND de.activo = 1
@@ -271,6 +271,7 @@ class ModeloConsultas {
         // Graba la consulta completa de una sola vez a partir del carrito en sesión
     static public function mdlConfirmarCarrito($carrito) {
         $conn = Conexion::conectar();
+        $etapa = "consulta";
 
         try {
             $conn->beginTransaction();
@@ -292,6 +293,7 @@ class ModeloConsultas {
             $t = $carrito["triaje"];
             $tieneTriaje = array_filter($t, function ($v) { return trim((string) $v) !== ""; });
             if (!empty($tieneTriaje)) {
+                $etapa = "triaje";
                 $stmt = $conn->prepare(
                     "INSERT INTO triaje (id_consulta, tension_arterial, frecuencia_cardiaca, frecuencia_respiratoria,
                          temperatura, saturacion, peso, fecha, activo)
@@ -312,9 +314,10 @@ class ModeloConsultas {
 
             // 3. Exámenes solicitados
             if (!empty($carrito["examenes"])) {
+                $etapa = "laboratorios";
                 $stmtEx = $conn->prepare(
-                    "INSERT INTO detalle_examen (id_consulta, id_examen, fecha_solicitud, estado, activo)
-                     VALUES (:id_consulta, :id_examen, CURDATE(), 'solicitado', 1)"
+                    "INSERT INTO detalle_examen (id_consulta, id_examen, fecha_solicitud, activo)
+                     VALUES (:id_consulta, :id_examen, CURDATE(), 1)"
                 );
                 foreach ($carrito["examenes"] as $ex) {
                     $stmtEx->bindParam(":id_consulta", $id_consulta, PDO::PARAM_INT);
@@ -327,9 +330,10 @@ class ModeloConsultas {
 
             // 4. Tratamiento implícito + medicamentos
             if (!empty($carrito["medicamentos"])) {
+                $etapa = "tratamiento";
                 $stmt = $conn->prepare(
-                    "INSERT INTO tratamientos (id_consulta, descripcion, duracion, indicaciones, activo)
-                     VALUES (:id_consulta, '', NULL, NULL, 1)"
+                    "INSERT INTO tratamientos (id_consulta, indicaciones, activo)
+                     VALUES (:id_consulta, NULL, 1)"
                 );
                 $stmt->bindParam(":id_consulta", $id_consulta, PDO::PARAM_INT);
                 if (!$stmt->execute()) {
@@ -337,6 +341,7 @@ class ModeloConsultas {
                 }
                 $id_tratamiento = (int) $conn->lastInsertId();
 
+                $etapa = "medicamentos";
                 $stmtMed = $conn->prepare(
                     "INSERT INTO detalle_tratamiento (id_tratamiento, id_medicamento, dosis, frecuencia, duracion, activo)
                      VALUES (:id_tratamiento, :id_medicamento, :dosis, :frecuencia, :duracion, 1)"
@@ -354,12 +359,14 @@ class ModeloConsultas {
             }
 
             // 5. Marcar la cita como atendida
+            $etapa = "estado de cita";
             $stmt = $conn->prepare("UPDATE citas SET estado = 'atendida' WHERE id_cita = :id_cita AND activo = 1");
             $stmt->bindParam(":id_cita", $carrito["id_cita"], PDO::PARAM_INT);
             if (!$stmt->execute()) {
                 throw new Exception("No se pudo marcar la cita como atendida");
             }
 
+            $etapa = "confirmacion";
             $conn->commit();
             return $id_consulta;
 
@@ -367,8 +374,32 @@ class ModeloConsultas {
             if ($conn->inTransaction()) {
                 $conn->rollBack();
             }
+            // No registrar el contenido clínico ni los parámetros de la consulta.
+            error_log("Error al finalizar consulta; etapa=" . $etapa . "; codigo=" . $e->getCode());
             return null;
         }
+    }
+
+        // ── Receta ────────────────────────────────────────────────────────────────
+
+    // consultas_modelo.php — junto a mdlObtenerDatosRecetaPorConsulta
+
+    static public function mdlObtenerDatosRecetaPorCita($id_cita) {
+        $stmt = Conexion::conectar()->prepare(
+            "SELECT p.nombre AS paciente_nombre, p.apellidos AS paciente_apellidos,
+                    p.ci, p.fecha_nacimiento,
+                    u.nombre AS medico_nombre, u.apellido AS medico_apellido,
+                    ci.fecha_hora
+            FROM citas ci
+            INNER JOIN pacientes p ON p.id_paciente = ci.id_paciente
+            INNER JOIN usuarios u  ON u.id_usuario  = ci.id_medico
+            WHERE ci.id_cita = :id_cita"
+        );
+        $stmt->bindParam(":id_cita", $id_cita, PDO::PARAM_INT);
+        $stmt->execute();
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->closeCursor();
+        return $resultado;
     }
     
 }

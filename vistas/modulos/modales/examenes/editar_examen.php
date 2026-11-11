@@ -15,6 +15,15 @@
         </div>
         <div class="form-group">
           <div style="position:relative;">
+            <span class="position-icon"><i class="fa fa-list"></i></span>
+            <select class="form-control input-lg" name="editarTipoExamen" id="editarTipoExamen" style="padding-left:35px;" required>
+              <option value="laboratorio">Laboratorio</option>
+              <option value="ecografia">Ecografía</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <div style="position:relative;">
             <span class="position-icon"><i class="fa fa-dollar-sign"></i></span>
             <input type="number" step="0.01" min="0" class="form-control input-lg" name="editarPrecioExamen" id="editarPrecioExamen" placeholder="Ingresar precio" style="padding-left:35px;" required>
           </div>

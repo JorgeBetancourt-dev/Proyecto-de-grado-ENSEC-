@@ -19,6 +19,7 @@ include "vistas/assets/eventos/examenes.eventos.php";
           <tr>
             <th>#</th>
             <th>Nombre</th>
+            <th>Tipo</th>
             <th>Precio</th>
             <th>Acciones</th>
           </tr>
@@ -32,11 +33,13 @@ include "vistas/assets/eventos/examenes.eventos.php";
           <tr>
             <td><?= $id ?></td>
             <td><?= htmlspecialchars($value["nombre"]) ?></td>
+            <td><?= htmlspecialchars(ucfirst($value["tipo"])) ?></td>
             <td>$<?= number_format($value["precio"], 2) ?></td>
             <td>
               <button class="btn btn-warning btnEditarExamen"
                 data-id="<?= $id ?>"
                 data-nombre="<?= htmlspecialchars($value["nombre"]) ?>"
+                data-tipo="<?= htmlspecialchars($value["tipo"]) ?>"
                 data-precio="<?= $value["precio"] ?>"
                 data-toggle="modal"
                 data-target="#modalEditarExamen">

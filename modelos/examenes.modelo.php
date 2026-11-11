@@ -24,18 +24,20 @@ class ModeloExamenes {
 
     static public function mdlCrearExamen($tabla, $datos) {
         $stmt = Conexion::conectar()->prepare(
-            "INSERT INTO $tabla (nombre, precio, activo) VALUES (:nombre, :precio, 1)"
+            "INSERT INTO $tabla (nombre, tipo, precio, activo) VALUES (:nombre, :tipo, :precio, 1)"
         );
         $stmt->bindParam(":nombre", $datos["nombre"], PDO::PARAM_STR);
+        $stmt->bindParam(":tipo",   $datos["tipo"],   PDO::PARAM_STR);
         $stmt->bindParam(":precio", $datos["precio"], PDO::PARAM_STR);
         return $stmt->execute() ? "ok" : "error";
     }
 
     static public function mdlEditarExamen($tabla, $datos) {
         $stmt = Conexion::conectar()->prepare(
-            "UPDATE $tabla SET nombre = :nombre, precio = :precio WHERE id_examen = :id"
+            "UPDATE $tabla SET nombre = :nombre, tipo = :tipo, precio = :precio WHERE id_examen = :id"
         );
         $stmt->bindParam(":nombre", $datos["nombre"], PDO::PARAM_STR);
+        $stmt->bindParam(":tipo",   $datos["tipo"],   PDO::PARAM_STR);
         $stmt->bindParam(":precio", $datos["precio"], PDO::PARAM_STR);
         $stmt->bindParam(":id",     $datos["id"],     PDO::PARAM_INT);
         return $stmt->execute() ? "ok" : "error";

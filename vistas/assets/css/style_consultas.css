@@ -1,0 +1,7 @@
+
+.consulta-header-card{background:#fff;border:1px solid #e3e6f0;border-radius:8px;padding:18px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.consulta-avatar{width:48px;height:48px;border-radius:50%;background:#e3e6f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#4e5cf0;margin-right:14px;}
+.card-box{background:#fff;border:1px solid #e3e6f0;border-radius:8px;padding:18px;margin-bottom:18px;}
+.triaje-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;}
+.step-badge{width:26px;height:26px;border-radius:50%;background:#4e5cf0;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;margin-right:8px;}
+.linea-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;}
