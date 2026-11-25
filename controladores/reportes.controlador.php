@@ -43,9 +43,11 @@ class ControladorReportes {
         if (isset($_GET["generarReportePagosPorMetodo"])) {
             $fechaInicio = $_GET["fecha_inicio"] ?? "";
             $fechaFin    = $_GET["fecha_fin"]    ?? "";
-            $metodoPago  = $_GET["metodo_pago"]  ?? "";
+            $metodoPago  = strtolower(trim($_GET["metodo_pago"] ?? ""));
 
-            $metodosValidos = ["efectivo", "tarjeta", "qr", "transferencia"];
+            // Los pagos combinados se reportan como una sola categoría (sin desglose de montos)
+            $metodosValidos = ["efectivo", "tarjeta", "qr", "transferencia",
+                               "efectivo y tarjeta", "efectivo y qr", "tarjeta y qr"];
 
             if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaInicio) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaFin)) {
                 http_response_code(400);
@@ -77,7 +79,7 @@ class ControladorReportes {
                 mkdir($carpetaDestino, 0755, true);
             }
 
-            $nombreArchivo = "reporte_pagos_" . $metodoPago . "_" . $fechaInicio . "_a_" . $fechaFin . ".pdf";
+            $nombreArchivo = "reporte_pagos_" . str_replace(" ", "_", $metodoPago) . "_" . $fechaInicio . "_a_" . $fechaFin . ".pdf";
             $rutaCompleta  = $carpetaDestino . $nombreArchivo;
 
             $pdf->Output($rutaCompleta, 'F');

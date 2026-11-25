@@ -3,58 +3,53 @@ require_once __DIR__ . "/ReporteBasePDF.php";
 
 class ReporteConsultasPDF extends ReporteBasePDF {
 
-    // $nombreMedico = null  → todos los médicos (se agrupa por médico)
+    // $nombreMedico = null → todos los médicos (consultas agrupadas por médico)
     public function generarReporteConsultas($fechaInicio, $fechaFin, $nombreMedico, array $consultas) {
-        $lineas = ['Del ' . date('d/m/Y', strtotime($fechaInicio)) . ' al ' . date('d/m/Y', strtotime($fechaFin))];
-        $lineas[] = ($nombreMedico !== null) ? 'Médico: ' . $nombreMedico : 'Todos los médicos';
-
-        $this->iniciar(
+        $this->iniciarReporte(
             'Reporte de Consultas por Médico',
-            $lineas,
-            'Reporte de Consultas ' . $fechaInicio . ' a ' . $fechaFin
+            [
+                [['Fecha inicio', $this->fmtFecha($fechaInicio)], ['Fecha final', $this->fmtFecha($fechaFin)]],
+                $this->infoMedico($nombreMedico)
+            ],
+            'Reporte de Consultas - ' . $fechaInicio . ' a ' . $fechaFin
         );
 
-        $agrupar = ($nombreMedico === null);
+        $grupos = $this->agruparPorMedico($consultas);
 
-        $this->encabezadoTabla([
-            ['Fecha atención', 30], ['Paciente', 55], ['CI', 25], ['Motivo', 70]
-        ]);
+        // ── Resumen por médico ─────────────────────────────────────────────
+        $this->tituloSeccion('Resumen por médico');
+        $colsResumen = [['Médico', 110], ['Cantidad de consultas', 70]];
+        if (empty($grupos)) {
+            $this->encabezadoTabla($colsResumen);
+            $this->filaMensaje('No se registraron consultas en este rango de fechas.');
+        } else {
+            $filas = [];
+            foreach ($grupos as $g) $filas[] = [$g['nombre'], count($g['filas'])];
+            $filas[] = ['negrita' => true, 'celdas' => ['Total de consultas', count($consultas)]];
+            $this->tabla($colsResumen, $filas);
+        }
+        $this->Ln(6);
+
+        // ── Detalle de consultas ───────────────────────────────────────────
+        $this->tituloSeccion('Detalle de consultas');
+        $cols = [['Fecha/Hora', 36], ['Paciente', 46], ['C.I.', 24], ['Motivo', 74]];
 
         if (empty($consultas)) {
-            $this->mensajeVacio('No se registraron consultas en este rango.');
+            $this->encabezadoTabla($cols);
+            $this->filaMensaje('No se registraron consultas en este rango de fechas.');
             return;
         }
 
-        // Cantidad de consultas por médico (para el título de cada grupo y el resumen)
-        $conteo  = [];
-        $nombres = [];
-        foreach ($consultas as $f) {
-            $id = $f['id_medico'];
-            $conteo[$id]  = ($conteo[$id] ?? 0) + 1;
-            $nombres[$id] = $f['medico'];
-        }
-
-        $medicoActual = null;
-        $fill = false;
-        foreach ($consultas as $f) {
-            if ($agrupar && $f['id_medico'] != $medicoActual) {
-                $medicoActual = $f['id_medico'];
-                $this->filaGrupo('Médico: ' . $f['medico'] . ' - ' . $conteo[$medicoActual] . ' consulta(s)');
-                $fill = false;
-            }
-            $fill = !$fill;
-            $this->filaTabla([
-                date('d/m/Y H:i', strtotime($f['fecha_atencion'])),
-                $f['paciente'],
-                $f['ci'],
-                $f['motivo']
-            ], ['C', 'L', 'C', 'L'], $fill);
-        }
-
         $filas = [];
-        foreach ($conteo as $id => $n) {
-            $filas[] = [$nombres[$id], $n];
+        foreach ($grupos as $g) {
+            if (!$nombreMedico) {
+                $n = count($g['filas']);
+                $filas[] = ['banda' => $g['nombre'] . '  (' . $n . ($n === 1 ? ' consulta)' : ' consultas)')];
+            }
+            foreach ($g['filas'] as $c) {
+                $filas[] = [$this->fmtFechaHora($c["fecha_atencion"]), $c["paciente"], $c["ci"], trim($c["motivo"])];
+            }
         }
-        $this->tablaResumen('Resumen por médico', [['Médico', 130], ['Consultas', 50]], $filas, 'TOTAL GENERAL');
+        $this->tabla($cols, $filas, 9);
     }
 }

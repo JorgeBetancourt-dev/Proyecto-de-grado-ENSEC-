@@ -43,34 +43,6 @@ $reportesCitas = [
         'flag' => 'generarReporteCitasEntreFechas',
         'medico' => false, 'examen' => false,
     ],
-    [
-        'id' => 'CitasPorMedico',
-        'titulo' => 'Citas por médico',
-        'desc' => 'Citas del rango de fechas de un médico. Si eliges "Todos los médicos", el reporte se agrupa por médico.',
-        'flag' => 'generarReporteCitasPorMedico',
-        'medico' => true, 'examen' => false,
-    ],
-    [
-        'id' => 'CitasAtendidas',
-        'titulo' => 'Citas atendidas por médico',
-        'desc' => 'Solo las citas con estado "atendida" dentro del rango de fechas.',
-        'flag' => 'generarReporteCitasAtendidas',
-        'medico' => true, 'examen' => false,
-    ],
-    [
-        'id' => 'CitasCanceladas',
-        'titulo' => 'Citas canceladas por médico',
-        'desc' => 'Solo las citas con estado "cancelada" dentro del rango de fechas.',
-        'flag' => 'generarReporteCitasCanceladas',
-        'medico' => true, 'examen' => false,
-    ],
-    [
-        'id' => 'CitasPendientes',
-        'titulo' => 'Citas pendientes por médico',
-        'desc' => 'Solo las citas con estado "pendiente" dentro del rango de fechas. Puedes elegir fechas futuras para ver la agenda.',
-        'flag' => 'generarReporteCitasPendientes',
-        'medico' => true, 'examen' => false,
-    ],
 ];
 
 // Configuración que lee el JS para armar la URL de cada reporte
@@ -260,6 +232,9 @@ foreach (array_merge($reportesConsultas, $reportesCitas) as $r) {
             <option value="efectivo">Efectivo</option>
             <option value="tarjeta">Tarjeta</option>
             <option value="qr">QR</option>
+            <option value="efectivo y tarjeta">Efectivo y Tarjeta</option>
+            <option value="efectivo y qr">Efectivo y QR</option>
+            <option value="tarjeta y qr">Tarjeta y QR</option>
           </select>
         </div>
       </div>

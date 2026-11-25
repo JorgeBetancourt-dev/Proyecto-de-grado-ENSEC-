@@ -3,15 +3,33 @@ require_once "conexion.php";
 
 class ModeloReportes {
 
+    // ── Método de pago normalizado ───────────────────────────────────────────
+    // En servicio_prestado.metodo_pago los pagos combinados se guardan con su desglose
+    // (ej. "QR Bs.100.00 + Efectivo Bs.60.00"). En los reportes ese desglose no importa:
+    // un pago combinado se cuenta completo, una sola vez, en la fila de su combinación.
+    // Esta expresión SQL devuelve siempre el nombre normalizado (minúsculas, métodos en
+    // orden fijo unidos con " y "): efectivo | tarjeta | qr | efectivo y tarjeta |
+    // efectivo y qr | tarjeta y qr. Si el texto no contiene ningún método conocido,
+    // devuelve el valor original en minúsculas.
+    static private function sqlMetodoNormalizado($columna) {
+        return "COALESCE(NULLIF(CONCAT_WS(' y ',
+                    IF({$columna} LIKE '%efectivo%',      'efectivo',      NULL),
+                    IF({$columna} LIKE '%tarjeta%',       'tarjeta',       NULL),
+                    IF({$columna} LIKE '%qr%',            'qr',            NULL),
+                    IF({$columna} LIKE '%transferencia%', 'transferencia', NULL)
+                ), ''), LOWER(TRIM({$columna})))";
+    }
+
     // ── Reporte de pagos del día (balance de caja) ──────────────────────────
 
-    // Detalle de cada pago del día, agrupado luego por método en el PDF
+    // Detalle de cada pago del día (el método sale normalizado)
     static public function mdlDetallePagosPorFecha($fecha) {
+        $metodo = self::sqlMetodoNormalizado("sp.metodo_pago");
         $stmt = Conexion::conectar()->prepare(
             "SELECT
                 sp.id_servicio_prestado,
                 sp.fecha,
-                sp.metodo_pago,
+                {$metodo} AS metodo_pago,
                 sp.costo_total,
                 COALESCE(
                     CONCAT(p.nombre, ' ', p.apellidos),
@@ -23,7 +41,7 @@ class ModeloReportes {
              LEFT JOIN clientes  c ON c.id_cliente  = sp.id_cliente
              WHERE DATE(sp.fecha) = :fecha
                AND sp.activo = 1
-             ORDER BY sp.metodo_pago, sp.fecha"
+             ORDER BY {$metodo}, sp.fecha"
         );
         $stmt->bindParam(":fecha", $fecha, PDO::PARAM_STR);
         $stmt->execute();
@@ -32,17 +50,21 @@ class ModeloReportes {
         return $resultado;
     }
 
-    // Subtotal por método de pago + total general del día (WITH ROLLUP)
+    // Subtotal por método de pago normalizado + total general del día (WITH ROLLUP)
     static public function mdlResumenPagosPorFecha($fecha) {
+        $metodo = self::sqlMetodoNormalizado("metodo_pago");
         $stmt = Conexion::conectar()->prepare(
             "SELECT
-                COALESCE(metodo_pago, 'TOTAL GENERAL') AS metodo_pago,
+                COALESCE(t.metodo, 'TOTAL GENERAL') AS metodo_pago,
                 COUNT(*) AS cantidad_pagos,
-                SUM(costo_total) AS total
-             FROM servicio_prestado
-             WHERE DATE(fecha) = :fecha
-               AND activo = 1
-             GROUP BY metodo_pago WITH ROLLUP"
+                SUM(t.costo_total) AS total
+             FROM (
+                SELECT {$metodo} AS metodo, costo_total
+                FROM servicio_prestado
+                WHERE DATE(fecha) = :fecha
+                  AND activo = 1
+             ) t
+             GROUP BY t.metodo WITH ROLLUP"
         );
         $stmt->bindParam(":fecha", $fecha, PDO::PARAM_STR);
         $stmt->execute();
@@ -55,11 +77,12 @@ class ModeloReportes {
         // ── Reporte de pagos entre fechas ────────────────────────────────────────
 
     static public function mdlDetallePagosPorRango($fechaInicio, $fechaFin) {
+        $metodo = self::sqlMetodoNormalizado("sp.metodo_pago");
         $stmt = Conexion::conectar()->prepare(
             "SELECT
                 sp.id_servicio_prestado,
                 sp.fecha,
-                sp.metodo_pago,
+                {$metodo} AS metodo_pago,
                 sp.costo_total,
                 COALESCE(
                     CONCAT(p.nombre, ' ', p.apellidos),
@@ -71,7 +94,7 @@ class ModeloReportes {
              LEFT JOIN clientes  c ON c.id_cliente  = sp.id_cliente
              WHERE DATE(sp.fecha) BETWEEN :fecha_inicio AND :fecha_fin
                AND sp.activo = 1
-             ORDER BY sp.fecha, sp.metodo_pago"
+             ORDER BY sp.fecha, {$metodo}"
         );
         $stmt->bindParam(":fecha_inicio", $fechaInicio, PDO::PARAM_STR);
         $stmt->bindParam(":fecha_fin",    $fechaFin,    PDO::PARAM_STR);
@@ -82,15 +105,19 @@ class ModeloReportes {
     }
 
     static public function mdlResumenPagosPorRango($fechaInicio, $fechaFin) {
+        $metodo = self::sqlMetodoNormalizado("metodo_pago");
         $stmt = Conexion::conectar()->prepare(
             "SELECT
-                COALESCE(metodo_pago, 'TOTAL GENERAL') AS metodo_pago,
+                COALESCE(t.metodo, 'TOTAL GENERAL') AS metodo_pago,
                 COUNT(*) AS cantidad_pagos,
-                SUM(costo_total) AS total
-             FROM servicio_prestado
-             WHERE DATE(fecha) BETWEEN :fecha_inicio AND :fecha_fin
-               AND activo = 1
-             GROUP BY metodo_pago WITH ROLLUP"
+                SUM(t.costo_total) AS total
+             FROM (
+                SELECT {$metodo} AS metodo, costo_total
+                FROM servicio_prestado
+                WHERE DATE(fecha) BETWEEN :fecha_inicio AND :fecha_fin
+                  AND activo = 1
+             ) t
+             GROUP BY t.metodo WITH ROLLUP"
         );
         $stmt->bindParam(":fecha_inicio", $fechaInicio, PDO::PARAM_STR);
         $stmt->bindParam(":fecha_fin",    $fechaFin,    PDO::PARAM_STR);
@@ -119,13 +146,16 @@ class ModeloReportes {
     }
 
         // ── Reporte de pagos por fecha + método específico ────────────────────────
+        // $metodoPago llega normalizado: efectivo | tarjeta | qr | efectivo y tarjeta | ...
+        // Un pago combinado solo aparece al elegir su combinación, no al elegir un método suelto.
 
     static public function mdlDetallePagosPorRangoYMetodo($fechaInicio, $fechaFin, $metodoPago) {
+        $metodo = self::sqlMetodoNormalizado("sp.metodo_pago");
         $stmt = Conexion::conectar()->prepare(
             "SELECT
                 sp.id_servicio_prestado,
                 sp.fecha,
-                sp.metodo_pago,
+                {$metodo} AS metodo_pago,
                 sp.costo_total,
                 COALESCE(
                     CONCAT(p.nombre, ' ', p.apellidos),
@@ -136,7 +166,7 @@ class ModeloReportes {
              LEFT JOIN pacientes p ON p.id_paciente = sp.id_paciente
              LEFT JOIN clientes  c ON c.id_cliente  = sp.id_cliente
              WHERE DATE(sp.fecha) BETWEEN :fecha_inicio AND :fecha_fin
-               AND sp.metodo_pago = :metodo_pago
+               AND {$metodo} = :metodo_pago
                AND sp.activo = 1
              ORDER BY sp.fecha"
         );
@@ -150,11 +180,12 @@ class ModeloReportes {
     }
 
     static public function mdlTotalesDiariosPorRangoYMetodo($fechaInicio, $fechaFin, $metodoPago) {
+        $metodo = self::sqlMetodoNormalizado("metodo_pago");
         $stmt = Conexion::conectar()->prepare(
             "SELECT DATE(fecha) AS dia, COUNT(*) AS cantidad_pagos, SUM(costo_total) AS total
              FROM servicio_prestado
              WHERE DATE(fecha) BETWEEN :fecha_inicio AND :fecha_fin
-               AND metodo_pago = :metodo_pago
+               AND {$metodo} = :metodo_pago
                AND activo = 1
              GROUP BY DATE(fecha)
              ORDER BY DATE(fecha)"
@@ -170,11 +201,12 @@ class ModeloReportes {
 
     // Total general (una sola fila) para el método y rango elegidos
     static public function mdlTotalGeneralPorRangoYMetodo($fechaInicio, $fechaFin, $metodoPago) {
+        $metodo = self::sqlMetodoNormalizado("metodo_pago");
         $stmt = Conexion::conectar()->prepare(
             "SELECT COUNT(*) AS cantidad_pagos, COALESCE(SUM(costo_total), 0) AS total
              FROM servicio_prestado
              WHERE DATE(fecha) BETWEEN :fecha_inicio AND :fecha_fin
-               AND metodo_pago = :metodo_pago
+               AND {$metodo} = :metodo_pago
                AND activo = 1"
         );
         $stmt->bindParam(":fecha_inicio", $fechaInicio, PDO::PARAM_STR);

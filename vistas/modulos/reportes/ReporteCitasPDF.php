@@ -1,112 +1,88 @@
 <?php
 require_once __DIR__ . "/ReporteBasePDF.php";
 
-/**
- * Sirve para los 5 reportes de citas: entre fechas, por médico, atendidas,
- * canceladas y pendientes. Lo único que cambia entre ellos es el título y las
- * filas que le pasa el controlador.
- */
 class ReporteCitasPDF extends ReporteBasePDF {
 
-    private $ordenEstados = ['Pendiente', 'Vencida', 'Atendida', 'Cancelada', 'Reprogramada'];
+    // Orden en que aparecen los estados en el resumen
+    const ESTADOS = ['Pendiente', 'Vencida', 'Atendida', 'Reprogramada', 'Cancelada'];
 
-    // Una cita pendiente cuya fecha ya pasó se muestra como "Vencida"
-    private function etiquetaEstado($estado, $fechaHora) {
-        if ($estado === 'pendiente' && strtotime($fechaHora) < time()) {
+    // La BD guarda: pendiente | atendida | cancelada | reprogramada.
+    // "Vencida" = cita pendiente cuya fecha/hora ya pasó.
+    private function estadoMostrado($cita) {
+        $estado = strtolower($cita["estado"]);
+        if ($estado === 'pendiente' && strtotime($cita["fecha_hora"]) < time()) {
             return 'Vencida';
         }
         return ucfirst($estado);
     }
 
-    // $modoMedico    → true en los reportes "por médico"; false en "entre fechas"
-    // $nombreMedico  → null con "todos los médicos" (se agrupa por médico)
+    /**
+     * $modoMedico    false → reporte general (columna Médico en la tabla)
+     *                true  → reporte por médico (Médico en el encabezado; si son
+     *                        todos, las citas se agrupan por médico)
+     * $nombreMedico  null = todos los médicos
+     */
     public function generarReporteCitas($titulo, $fechaInicio, $fechaFin, $modoMedico, $nombreMedico, array $citas) {
-        $lineas = ['Del ' . date('d/m/Y', strtotime($fechaInicio)) . ' al ' . date('d/m/Y', strtotime($fechaFin))];
+        $info = [[['Fecha inicio', $this->fmtFecha($fechaInicio)], ['Fecha final', $this->fmtFecha($fechaFin)]]];
         if ($modoMedico) {
-            $lineas[] = ($nombreMedico !== null) ? 'Médico: ' . $nombreMedico : 'Todos los médicos';
+            $info[] = $this->infoMedico($nombreMedico);
+        }
+        $this->iniciarReporte($titulo, $info, $titulo . ' - ' . $fechaInicio . ' a ' . $fechaFin);
+
+        // ── Resumen por estado (solo estados con citas) ────────────────────
+        $conteo = array_fill_keys(self::ESTADOS, 0);
+        foreach ($citas as $c) {
+            $e = $this->estadoMostrado($c);
+            $conteo[$e] = isset($conteo[$e]) ? $conteo[$e] + 1 : 1;
         }
 
-        $this->iniciar($titulo, $lineas, $titulo . ' ' . $fechaInicio . ' a ' . $fechaFin);
-
-        $agrupar   = ($modoMedico && $nombreMedico === null);
-        $conMedico = !$modoMedico; // en "entre fechas" el médico es una columna más
-
-        if ($conMedico) {
-            $this->encabezadoTabla([
-                ['Fecha/Hora', 28], ['Paciente', 48], ['CI', 22],
-                ['Tipo', 24], ['Médico', 34], ['Estado', 24]
-            ]);
-            $alineaciones = ['C', 'L', 'C', 'L', 'L', 'C'];
+        $this->tituloSeccion('Resumen por estado');
+        $filas = [];
+        foreach ($conteo as $estado => $n) {
+            if ($n > 0) $filas[] = [$estado, $n];
+        }
+        $colsResumen = [['Estado', 90], ['Cantidad de citas', 90]];
+        if (empty($filas)) {
+            $this->encabezadoTabla($colsResumen);
+            $this->filaMensaje('No se registraron citas en este rango de fechas.');
         } else {
-            $this->encabezadoTabla([
-                ['Fecha/Hora', 30], ['Paciente', 62], ['CI', 26],
-                ['Tipo', 32], ['Estado', 30]
-            ]);
-            $alineaciones = ['C', 'L', 'C', 'L', 'C'];
+            $filas[] = ['negrita' => true, 'celdas' => ['Total de citas', count($citas)]];
+            $this->tabla($colsResumen, $filas);
         }
+        $this->Ln(6);
+
+        // ── Detalle de citas ───────────────────────────────────────────────
+        $this->tituloSeccion('Detalle de citas');
+
+        // Con médico en el encabezado o agrupado, la columna Médico sobra
+        $conColumnaMedico = !$modoMedico;
+        $cols = $conColumnaMedico
+            ? [['Fecha/Hora', 42], ['Paciente', 35], ['C.I.', 22], ['Tipo', 20], ['Médico', 37], ['Estado', 24]]
+            : [['Fecha/Hora', 42], ['Paciente', 50], ['C.I.', 26], ['Tipo', 36], ['Estado', 26]];
 
         if (empty($citas)) {
-            $this->mensajeVacio('No se encontraron citas en este rango.');
+            $this->encabezadoTabla($cols);
+            $this->filaMensaje('No se registraron citas en este rango de fechas.');
             return;
         }
 
-        // Conteos para los títulos de grupo y los resúmenes
-        $porMedico = [];
-        $nombres   = [];
-        $porEstado = [];
-        foreach ($citas as $c) {
-            $m = $c['id_medico'];
-            $porMedico[$m] = ($porMedico[$m] ?? 0) + 1;
-            $nombres[$m]   = $c['medico'];
-            $etiqueta = $this->etiquetaEstado($c['estado'], $c['fecha_hora']);
-            $porEstado[$etiqueta] = ($porEstado[$etiqueta] ?? 0) + 1;
-        }
+        $fila = function ($c) use ($conColumnaMedico) {
+            $celdas = [$this->fmtFechaHora($c["fecha_hora"]), $c["paciente"], $c["ci"], $c["tipo_cita"]];
+            if ($conColumnaMedico) $celdas[] = $c["medico"];
+            $celdas[] = $this->estadoMostrado($c);
+            return $celdas;
+        };
 
-        $medicoActual = null;
-        $fill = false;
-        foreach ($citas as $c) {
-            if ($agrupar && $c['id_medico'] != $medicoActual) {
-                $medicoActual = $c['id_medico'];
-                $this->filaGrupo('Médico: ' . $c['medico'] . ' - ' . $porMedico[$medicoActual] . ' cita(s)');
-                $fill = false;
+        $filas = [];
+        if ($modoMedico && !$nombreMedico) {
+            foreach ($this->agruparPorMedico($citas) as $g) {
+                $n = count($g['filas']);
+                $filas[] = ['banda' => $g['nombre'] . '  (' . $n . ($n === 1 ? ' cita)' : ' citas)')];
+                foreach ($g['filas'] as $c) $filas[] = $fila($c);
             }
-            $fill = !$fill;
-
-            $valores = [
-                date('d/m/Y H:i', strtotime($c['fecha_hora'])),
-                $c['paciente'],
-                $c['ci'],
-                $c['tipo_cita']
-            ];
-            if ($conMedico) {
-                $valores[] = $c['medico'];
-            }
-            $valores[] = $this->etiquetaEstado($c['estado'], $c['fecha_hora']);
-
-            $this->filaTabla($valores, $alineaciones, $fill);
+        } else {
+            foreach ($citas as $c) $filas[] = $fila($c);
         }
-
-        // Resumen por estado, en un orden fijo y solo con los estados presentes
-        $resumenEstado = [];
-        foreach ($this->ordenEstados as $estado) {
-            if (!empty($porEstado[$estado])) {
-                $resumenEstado[] = [$estado, $porEstado[$estado]];
-            }
-        }
-        $this->tablaResumen('Resumen por estado', [['Estado', 130], ['Cantidad', 50]], $resumenEstado, 'TOTAL GENERAL');
-
-        if ($agrupar) {
-            $resumenMedico = [];
-            foreach ($porMedico as $m => $n) {
-                $resumenMedico[] = [$nombres[$m], $n];
-            }
-            $this->tablaResumen('Resumen por médico', [['Médico', 130], ['Citas', 50]], $resumenMedico, 'TOTAL GENERAL');
-        }
-
-        if (!empty($porEstado['Vencida'])) {
-            $this->Ln(3);
-            $this->SetFont('helvetica', 'I', 8);
-            $this->Cell(0, 5, 'Vencida: cita pendiente cuya fecha y hora ya pasaron sin haber sido atendida.', 0, 1, 'L');
-        }
+        $this->tabla($cols, $filas, 9);
     }
 }
